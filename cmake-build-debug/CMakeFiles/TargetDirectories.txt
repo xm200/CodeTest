@@ -1,3 +1,0 @@
-C:/Users/glebf/CLionProjects/DFS/cmake-build-debug/CMakeFiles/DFS.dir
-C:/Users/glebf/CLionProjects/DFS/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/glebf/CLionProjects/DFS/cmake-build-debug/CMakeFiles/rebuild_cache.dir
