@@ -1,5 +1,5 @@
 #include <iostream>
-#include <interval.h>
+#include "interval.h"
 #include <queue>
 #include <vector>
 
@@ -28,14 +28,15 @@ struct Graph {
 
     void dfs(int start) {
         for (int i = 0; i < used.size(); ++i) used[i] = false;
-        _dfs(start)
+        _dfs(start);
     }
 
     void _bfs(int start) {
         std::queue<int> q;
         q.push(start);
         while (!q.empty()) {
-            int v = q.pop();
+            int v = q.front();
+            q.pop();
             if (used[v]) continue;
             used[v] = true;
             for (int x : g[start]) q.push(x);
@@ -47,3 +48,6 @@ struct Graph {
         _bfs(start);
     }
 };
+int main() {
+    return 0;
+}
