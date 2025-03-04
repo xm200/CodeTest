@@ -2,33 +2,33 @@
 #include "interval.h"
 #include <queue>
 #include <vector>
+#include "memory"
 
-
-template <class T>
 struct Node {
-    interval::interval<T> range; // Node With code and interval
+    interval::interval<int> range; // Node With code and interval
+    interval::interval<int> code_range; // code and interval
 };
 
+
 struct Graph {
-    std::vector<int> ptrs; // pointers on Nodes
+    std::vector<std::unique_ptr<Node>> ptrs; // pointers on Nodes
     std::vector<bool> used; // Array of used Nodes
     std::vector<std::vector<int>> g;
 
-    Graph(int v) {
-        ptrs.resize(v);
-        used.resize(v);
-        g.resize(v);
+    Graph() = default;
+    ~Graph() = default;
+
+    template<class T>
+    void add_Node(Node *n) {
+        ptrs.push_back(std::make_unique<Node>(Node({n -> range, n -> code_range})));
+        used.push_back(false);
+        g.emplace_back();
     }
 
     void _dfs(int start) {
         if (used[start]) return;
         used[start] = true;
         for (int &x: g[start]) _dfs(x);
-    }
-
-    void dfs(int start) {
-        for (int i = 0; i < used.size(); ++i) used[i] = false;
-        _dfs(start);
     }
 
     void _bfs(int start) {
@@ -44,10 +44,17 @@ struct Graph {
     }
 
     void bfs(int start) {
-        for (int i = 0; i < used.size(); ++i) used[i] = false;
+        for (auto && i : used) i = false;
         _bfs(start);
     }
+
+    void dfs(int start) {
+        for (auto && i : used) i = false;
+        _dfs(start);
+    }
 };
+
 int main() {
+    std::cout << "aboba";
     return 0;
 }
