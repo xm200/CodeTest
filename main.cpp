@@ -2,11 +2,13 @@
 #include "interval.h"
 #include <queue>
 #include <vector>
-#include "memory"
+#include <memory>
+#include <any>
+
 
 struct Node {
-    interval::interval<int> range; // Node With code and interval
-    interval::interval<int> code_range; // code and interval
+    std::vector<std::any> ranges; // As you asked to do
+    interval::interval<int> code_range;
 };
 
 
@@ -20,7 +22,7 @@ struct Graph {
 
     template<class T>
     void add_Node(Node *n) {
-        ptrs.push_back(std::make_unique<Node>(Node({n -> range, n -> code_range})));
+        ptrs.push_back(std::make_unique<Node>(Node({n->ranges, n->code_range})));
         used.push_back(false);
         g.emplace_back();
     }
@@ -53,6 +55,8 @@ struct Graph {
         _dfs(start);
     }
 };
+
+
 
 int main() {
     std::cout << "aboba";
