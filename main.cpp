@@ -4,25 +4,30 @@
 #include <vector>
 #include <memory>
 #include <any>
+#include <variant>
 
 
-struct Node {
-    std::vector<std::any> ranges; // As you asked to do
+struct NonStandartTypeNode {
+    interval::interval<std::unique_ptr<std::any>> base;
+};
+
+
+struct StandartTypeNode {
+    std::vector<std::variant<int, float, double, long long, long double, unsigned int, unsigned long long>> ranges; // As you asked to do
     interval::interval<int> code_range;
 };
 
 
 struct Graph {
-    std::vector<std::unique_ptr<Node>> ptrs; // pointers on Nodes
+    std::vector<std::unique_ptr<std::any>> ptrs; // pointers on Nodes
     std::vector<bool> used; // Array of used Nodes
     std::vector<std::vector<int>> g;
 
     Graph() = default;
     ~Graph() = default;
 
-    template<class T>
-    void add_Node(Node *n) {
-        ptrs.push_back(std::make_unique<Node>(Node({n->ranges, n->code_range})));
+    void add_node(std::any *n) {
+        ptrs.push_back(std::make_unique<std::any>(n));
         used.push_back(false);
         g.emplace_back();
     }
