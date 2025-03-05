@@ -5,6 +5,7 @@
 #include <memory>
 #include <any>
 #include <variant>
+#include "CFGparser.h"
 
 
 struct NonStandartTypeNode {
@@ -64,6 +65,7 @@ struct Graph {
 
 
 int main() {
-    std::cout << "aboba";
+    std::string path = R"(C:\Users\glebf\CLionProjects\CodeTest2\main.cpp)";
+    std::cout << parse::compiler_command(path);
     return 0;
 }
