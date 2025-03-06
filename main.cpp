@@ -64,6 +64,7 @@ struct Graph {
 int main() {
     const std::string path = "./test.py";
     auto data = parse::compiler_command(path);
+    parse::parser::parse(data, data.size());
     for (auto &i : data) std::cout << i << '\n';
     return 0;
 }

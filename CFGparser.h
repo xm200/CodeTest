@@ -1,28 +1,28 @@
 //
 // Created by xm200 on 05.03.2025.
 //
-//#pragma once
-#include <fstream>
-#include <sstream>
 
 #ifndef CODETEST_CFGPARSER_H
 #define CODETEST_CFGPARSER_H
+
+#include <fstream>
+#include <sstream>
 namespace parse {
 
-    std::string file_name, file_type;
+    inline std::string file_name, file_type;
 
     // ANOTHER - operators, types, functions calls and all that can be in the code
     enum search {
         IF, ELIF, ELSE, FOR, WHILE, ANOTHER
     };
 
-    int get_construction_type(const std::string &buf) {
+    int inline get_construction_type(const std::string &buf) {
         if (buf == "if") return IF;
         if (buf == "elif") return ELIF;
         if (buf == "else" || buf == "else:") return ELSE;
         if (buf == "for") return FOR;
         if (buf == "while") return WHILE;
-        else return ANOTHER;
+        return ANOTHER;
     }
 
     enum os {
@@ -72,9 +72,9 @@ namespace parse {
     private:
         std::string path;
         bool inited = false;
-    } cache;
+    } inline cache;
 
-    std::vector<std::string> compiler_command(const std::string &path) {
+    inline std::vector<std::string> compiler_command(const std::string &path) {
         std::size_t ind = 0, point = path.size();
 
         for (auto i = path.size(); i --> 0;) {
@@ -103,7 +103,8 @@ namespace parse {
         return out;
     }
 
-    class Parser {
+    class parser {
+        public:
         [[nodiscard]] static size_t get_spaces(const std::string &buf) {
             size_t spaces = 0;
             for (auto &s : buf) if (s == ' ') ++spaces; else break;
@@ -121,17 +122,16 @@ namespace parse {
             return code.size() - l;
         }
 
-        void parse(const std::vector<std::string> &code, size_t len, size_t l = 0, size_t depth = 0) {
+        static void parse(const std::vector<std::string> &code, size_t len, size_t l = 0, size_t depth = 0) {
 #if defined(DEBUG_MODE)
             if (l >= code.size()) throw
                         std::length_error("Unreachable start limit in function parse()");
             if (l + len >= code.size()) throw
                         std::length_error("Unreachable end limit in function parse()");
 #endif
-            std::stringstream expr;
-            for (int i = l; i < l + len; ++i) {
+            for (auto i = l; i < l + len; ++i) {
                 std::string first_word;
-                expr = std::stringstream(code[i]);
+                std::stringstream expr = std::stringstream(code[i]);
                 expr >> first_word;
                 switch (get_construction_type(first_word)) {
                     case IF:
