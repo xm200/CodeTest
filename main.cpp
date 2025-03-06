@@ -62,7 +62,8 @@ struct Graph {
     }
 };
 int main() {
-    const std::string path = "main.cpp";
-    std::cout << parse::compiler_command(path);
+    const std::string path = "./test.py";
+    auto data = parse::compiler_command(path);
+    for (auto &i : data) std::cout << i << '\n';
     return 0;
 }

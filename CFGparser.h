@@ -8,36 +8,25 @@
 #define CODETEST_CFGPARSER_H
 namespace parse {
 
+    std::string file_name, file_type;
+
     // ANOTHER - operators, types, functions calls and all that can be in the code
     enum search {
-        IF, ELSE, FOR, WHILE, ANOTHER
+        IF, ELIF, ELSE, FOR, WHILE, ANOTHER
     };
 
     int get_construction_type(const std::string &buf) {
         if (buf == "if") return IF;
+        if (buf == "elif") return ELIF;
         if (buf == "else") return ELSE;
         if (buf == "for") return FOR;
         if (buf == "while") return WHILE;
         else return ANOTHER;
     }
 
-    enum compilers {
-        GNU, MSC, CLANG
-    };
-
     enum os {
         LINUX, MACOS, WIN
     };
-
-    constexpr short get_c() {
-        #if defined(__GNUC__)
-            return GNU;
-        #elif defined(__clang__)
-            return CLANG;
-        #elif defined(_MSC_VER)
-            return MSC;
-        #endif
-    }
 
     constexpr short get_os() {
         #if defined(__linux__)
@@ -76,7 +65,7 @@ namespace parse {
         bool inited = false;
     } cache;
 
-    std::string compiler_command(const std::string &path) {
+    std::vector<std::string> compiler_command(const std::string &path) {
         std::size_t ind = 0, point = path.size();
         for (auto i = path.size(); i --> 0;) {
             if (point == path.size() && path[i] == '.') point = i;
@@ -86,23 +75,18 @@ namespace parse {
             }
         }
         cache.init(path.substr(0, ind));
-        std::string command;
-        std::string buf, out;
-        const std::string path_to_preprocessed_file = cache() + path.substr(ind, point - ind) + ".i";
+        std::string buf;
+        std::vector<std::string> out;
+        file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
+        std::ifstream file(path);
+        while (std::getline(file, buf)) out.push_back(buf);
+        file.close();
 #if defined(VERBOSE)
         std::cout << "path to cache: " << cache() << '\n';
-        std::cout << "path to preprocessed file: " << path_to_preprocessed_file << '\n';
+        std::cout << "file name: " << file_name << '\n';
+        std::cout << "file type: " << (file_type.empty() ? "*none*":file_type) << '\n';
+        std::cout << "code have " << out.size() << " lines\n";
 #endif
-        if (get_c() == GNU) command = "g++ -E " + path + " -o " + path_to_preprocessed_file;
-        else if (get_c() == CLANG) command = "clang -E " + path + " -o " + path_to_preprocessed_file;
-        else if (get_c() == MSC){
-            command = "cl /P " + path;
-        }
-        else throw std::runtime_error("unknown compiler, install gcc, clang or MSC");
-        system(command.c_str());
-        std::ifstream file((get_c() == MSC) ? path.substr(0, path.length() - 2) + ".i" : "main.o");
-        while (file >> buf) out += buf + ' ';
-        file.close();
         return out;
     }
 
