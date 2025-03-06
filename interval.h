@@ -537,8 +537,8 @@ namespace interval {
 
         void custom_transfer_in(interval &buf, const std::function<T(const T&)> &fun, const T& a, const T& b) const {
             for (auto &[fst, snd] : intervals) {
-                auto x = (fst.first == 0 ? std::make_pair(1, a):std::make_pair(fst.first, fun(fst.second)));
-                auto y = (snd.first == 2 ? std::make_pair(1, b):std::make_pair(snd.first, fun(snd.second)));
+                auto x = fst.first == 0 ? std::make_pair(1, a):std::make_pair(fst.first, fun(fst.second));
+                auto y = snd.first == 2 ? std::make_pair(1, b):std::make_pair(snd.first, fun(snd.second));
                 buf.add_interval_in(std::min(x, y), std::max(x, y));
             }
             for (auto &i : points) {

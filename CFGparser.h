@@ -2,8 +2,8 @@
 // Created by xm200 on 05.03.2025.
 //
 
-#ifndef CODETEST_CFGPARSER_H
-#define CODETEST_CFGPARSER_H
+#ifndef CODE_TEST_CFG_PARSER_H
+#define CODE_TEST_CFG_PARSER_H
 
 #include <fstream>
 #include <sstream>
@@ -11,24 +11,9 @@ namespace parse {
 
     inline std::string file_name, file_type;
 
-    // ANOTHER - operators, types, functions calls and all that can be in the code
-    enum search {
-        IF, ELIF, ELSE, FOR, WHILE, ANOTHER
-    };
-
-    int inline get_construction_type(const std::string &buf) {
-        if (buf == "if") return IF;
-        if (buf == "elif") return ELIF;
-        if (buf == "else" || buf == "else:") return ELSE;
-        if (buf == "for") return FOR;
-        if (buf == "while") return WHILE;
-        return ANOTHER;
-    }
-
     enum os {
         LINUX, MACOS, WIN
     };
-
     constexpr short get_os() {
         #if defined(__linux__)
             return LINUX;
@@ -38,34 +23,37 @@ namespace parse {
             return MACOS;
         #endif
     }
-    struct cache_t {
 
+
+
+    struct cache_t {
         void init(const std::string &way) {
-            if (inited) {
-                if (way + '/' == path || way == path) return;
-#if defined(DEBUG_MODE)
-                throw std::logic_error("cache with multiple initialization and different paths");
-#endif
-            }
+            #if defined(DEBUG_MODE)
+                if (inited) {
+                    if (way + '/' == path || way == path || way + '\\' == path) return;
+                    throw std::logic_error("cache with multiple initialization and different paths");
+                }
+            #endif
 
             if (way.empty()) path = way;
             else path = way + '/';
+
             path += "cache/";
             system(("mkdir " + path).c_str());
             inited = true;
         }
 
         ~cache_t() {
-#if !defined(DO_NOT_REMOVE_CACHE)
             if (!inited) return;
-            if constexpr (get_os() == WIN) system("rd /s /q cache"); // Remove dir
-            if constexpr (get_os() == LINUX || get_os() == MACOS) system("rm -rf cache");
-#endif
+            #if !defined(DO_NOT_REMOVE_CACHE)
+                if constexpr (get_os() == WIN) system("rd /s /q cache"); // Remove dir
+                if constexpr (get_os() == LINUX || get_os() == MACOS) system("rm -rf cache");
+            #endif
         }
         const std::string &operator()() const {
-#if defined(DEBUG_MODE)
-            if (!inited) throw std::logic_error("cache dir don`t exists");
-#endif
+            #if defined(DEBUG_MODE)
+                if (!inited) throw std::logic_error("cache dir does not exists");
+            #endif
             return path;
         }
 
@@ -74,9 +62,10 @@ namespace parse {
         bool inited = false;
     } inline cache;
 
-    inline std::vector<std::string> compiler_command(const std::string &path) {
-        std::size_t ind = 0, point = path.size();
 
+
+    inline std::vector<std::string> read_file(const std::string &path) {
+        std::size_t ind = 0, point = path.size();
         for (auto i = path.size(); i --> 0;) {
             if (point == path.size() && path[i] == '.') point = i;
             if (path[i] == '/' || path[i] == '\\') {
@@ -86,53 +75,44 @@ namespace parse {
         }
 
         cache.init(path.substr(0, ind));
+        file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
+
         std::string buf;
         std::vector<std::string> out;
-        file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
         std::ifstream file(path);
         while (std::getline(file, buf)) out.push_back(buf);
         file.close();
 
-#if defined(VERBOSE)
-        std::cout << "path to cache: " << cache() << '\n';
-        std::cout << "file name: " << file_name << '\n';
-        std::cout << "file type: " << (file_type.empty() ? "*none*":file_type) << '\n';
-        std::cout << "code have " << out.size() << " lines\n";
-#endif
+        #if defined(VERBOSE)
+            std::cout << "path to cache: " << cache() << '\n';
+            std::cout << "file name: " << file_name << '\n';
+            std::cout << "file type: " << (file_type.empty() ? "*none*":file_type) << '\n';
+            std::cout << "code have " << out.size() << " lines\n";
+        #endif
 
         return out;
     }
 
+
+
     class parser {
         public:
-        [[nodiscard]] static size_t get_spaces(const std::string &buf) {
-            size_t spaces = 0;
-            for (auto &s : buf) if (s == ' ') ++spaces; else break;
-            return spaces;
-        }
+        static void parse(const std::vector<std::string> &code,
+                          const size_t len,
+                          const size_t l = 0,
+                          const size_t depth = 0) {
+            #if defined(DEBUG_MODE)
+                if (l >= code.size()) throw
+                            std::length_error("Unreachable start limit in function parse()");
+                if (l + len >= code.size()) throw
+                            std::length_error("Unreachable end limit in function parse()");
+            #endif
 
-        [[nodiscard]] static size_t get_code_block(const std::vector<std::string> &code, size_t l = 0) {
-#if defined(DEBUG_MODE)
-            if (l >= code.size()) throw
-                        std::length_error("Unreachable start limit in function get_code_block()");
-#endif
-            size_t block_spaces = get_spaces(code[l]);
-            for (size_t i = l; i < code.size(); ++i)
-                if (get_spaces(code[i]) < block_spaces) return i - l;
-            return code.size() - l;
-        }
-
-        static void parse(const std::vector<std::string> &code, size_t len, size_t l = 0, size_t depth = 0) {
-#if defined(DEBUG_MODE)
-            if (l >= code.size()) throw
-                        std::length_error("Unreachable start limit in function parse()");
-            if (l + len >= code.size()) throw
-                        std::length_error("Unreachable end limit in function parse()");
-#endif
             for (auto i = l; i < l + len; ++i) {
                 std::string first_word;
-                std::stringstream expr = std::stringstream(code[i]);
+                auto expr = std::stringstream(code[i]);
                 expr >> first_word;
+
                 switch (get_construction_type(first_word)) {
                     case IF:
                     case ELIF:
@@ -142,10 +122,45 @@ namespace parse {
                         get_code_block(code, l + 1); /// todo: add different level parsing
                         break;
                     }
-
+                    default:
+                        break;
                 }
             }
         }
+    protected:
+        [[nodiscard]] static size_t get_spaces(const std::string &buf) {
+            size_t spaces = 0;
+            for (auto &s : buf) if (s == ' ') ++spaces; else break;
+            return spaces;
+        }
+
+        [[nodiscard]] static size_t get_code_block(const std::vector<std::string> &code, const size_t l = 0) {
+        #if defined(DEBUG_MODE)
+                if (l >= code.size()) throw
+                        std::length_error("Unreachable start limit in function get_code_block()");
+        #endif
+
+            const size_t block_spaces = get_spaces(code[l]);
+            for (size_t i = l; i < code.size(); ++i) if (get_spaces(code[i]) < block_spaces) return i - l;
+            return code.size() - l;
+        }
+
+
+
+    private:
+        enum search {
+            IF, ELIF, ELSE, FOR, WHILE, ANOTHER
+        };
+
+        // ANOTHER - operators, types, functions calls and all that can be in the code
+        static int get_construction_type(const std::string &buf) {
+            if (buf == "if") return IF;
+            if (buf == "elif") return ELIF;
+            if (buf == "else" || buf == "else:") return ELSE;
+            if (buf == "for") return FOR;
+            if (buf == "while") return WHILE;
+            return ANOTHER;
+        }
     };
 }
-#endif //CODETEST_CFGPARSER_H
+#endif //CODE_TEST_CFG_PARSER_H

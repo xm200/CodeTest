@@ -59,7 +59,7 @@ int main() {
             std::cout << vec[i].print();
         }
     };
-    auto index_not_exist = [&vec](int64_t a, int64_t b) {
+    auto index_not_exist = [&vec](const int64_t a, const int64_t b) {
         if (a >= vec.size() || b >= vec.size()) {
             std::cout << "this index don`t exists\n";
             return true;

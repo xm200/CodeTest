@@ -8,12 +8,12 @@
 #include "CFGparser.h"
 
 
-struct NonStandartTypeNode {
+struct NonStandardTypeNode {
     interval::interval<std::unique_ptr<std::any>> base;
 };
 
 
-struct StandartTypeNode {
+struct StandardTypeNode {
     std::vector<std::variant<int, float, double, long long, long double, unsigned int, unsigned long long>> ranges; // As you asked to do
     interval::interval<int> code_range;
 };
@@ -63,7 +63,7 @@ struct Graph {
 };
 int main() {
     const std::string path = "./test.py";
-    auto data = parse::compiler_command(path);
+    auto data = parse::read_file(path);
     parse::parser::parse(data, data.size());
     for (auto &i : data) std::cout << i << '\n';
     return 0;
