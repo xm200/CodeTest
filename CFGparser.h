@@ -3,6 +3,7 @@
 //
 //#pragma once
 #include <fstream>
+#include <sstream>
 
 #ifndef CODETEST_CFGPARSER_H
 #define CODETEST_CFGPARSER_H
@@ -18,7 +19,7 @@ namespace parse {
     int get_construction_type(const std::string &buf) {
         if (buf == "if") return IF;
         if (buf == "elif") return ELIF;
-        if (buf == "else") return ELSE;
+        if (buf == "else" || buf == "else:") return ELSE;
         if (buf == "for") return FOR;
         if (buf == "while") return WHILE;
         else return ANOTHER;
@@ -109,10 +110,10 @@ namespace parse {
             return spaces;
         }
 
-        static size_t get_code_block(const std::vector<std::string> &code, size_t l = 0) {
+        [[nodiscard]] static size_t get_code_block(const std::vector<std::string> &code, size_t l = 0) {
 #if defined(DEBUG_MODE)
             if (l >= code.size()) throw
-                    std::length_error("Unreachable start limit in function get_code_block()");
+                        std::length_error("Unreachable start limit in function get_code_block()");
 #endif
             size_t block_spaces = get_spaces(code[l]);
             for (size_t i = l; i < code.size(); ++i)
@@ -120,7 +121,31 @@ namespace parse {
             return code.size() - l;
         }
 
+        void parse(const std::vector<std::string> &code, size_t len, size_t l = 0, size_t depth = 0) {
+#if defined(DEBUG_MODE)
+            if (l >= code.size()) throw
+                        std::length_error("Unreachable start limit in function parse()");
+            if (l + len >= code.size()) throw
+                        std::length_error("Unreachable end limit in function parse()");
+#endif
+            std::stringstream expr;
+            for (int i = l; i < l + len; ++i) {
+                std::string first_word;
+                expr = std::stringstream(code[i]);
+                expr >> first_word;
+                switch (get_construction_type(first_word)) {
+                    case IF:
+                    case ELIF:
+                    case ELSE:
+                    case FOR:
+                    case WHILE: {
+                        get_code_block(code, l + 1); /// todo: add different level parsing
+                        break;
+                    }
 
+                }
+            }
+        }
     };
 }
 #endif //CODETEST_CFGPARSER_H
