@@ -61,11 +61,8 @@ struct Graph {
         _dfs(start);
     }
 };
-
-
-
 int main() {
-    std::string path = R"(C:\Users\glebf\CLionProjects\CodeTest2\main.cpp)";
+    const std::string path = "main.cpp";
     std::cout << parse::compiler_command(path);
     return 0;
 }

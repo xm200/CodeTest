@@ -1,11 +1,11 @@
 //
 // Created by xm200 on 05.03.2025.
 //
-#pragma once
+//#pragma once
 #include <fstream>
 
-//#ifndef CODETEST_CFGPARSER_H
-//#define CODETEST_CFGPARSER_H
+#ifndef CODETEST_CFGPARSER_H
+#define CODETEST_CFGPARSER_H
 namespace parse {
 
     // ANOTHER - operators, types, functions calls and all that can be in the code
@@ -29,7 +29,7 @@ namespace parse {
         LINUX, MACOS, WIN
     };
 
-    short get_c() {
+    constexpr short get_c() {
         #if defined(__GNUC__)
             return GNU;
         #elif defined(__clang__)
@@ -48,28 +48,61 @@ namespace parse {
             return MACOS;
         #endif
     }
+    struct cache_t {
+        void init(const std::string &way) {
+            if (inited) {
+                if (way + '/' == path || way == path) return;
+                throw std::logic_error("cache with multiple initialization and different paths");
+            }
+            if (way.empty()) path = way;
+            else path = way + '/';
+            path += "cache/";
+            system(("mkdir " + path).c_str());
+            inited = true;
+        }
+        ~cache_t() {
+#if !defined(DO_NOT_REMOVE_CACHE)
+            if (!inited) return;
+            if constexpr (get_os() == WIN) system("rd /s /q cache"); // Remove dir
+            if constexpr (get_os() == LINUX || get_os() == MACOS) system("rm -rf cache");
+#endif
+        }
+        const std::string &operator()() const {
+            if (!inited) throw std::logic_error("cache dir don`t exists");
+            return path;
+        }
+    private:
+        std::string path;
+        bool inited = false;
+    } cache;
 
-    void init() {
-        system("mkdir cache"); // Make dir
-    }
-
-    void clear() {
-        if constexpr (get_os() == WIN) system("rd /s /q cache"); // Remove dir
-        if constexpr (get_os() == LINUX || get_os() == MACOS) system("rm -rf cache");
-    }
-
-    std::string compiler_command(std::string &path) {
+    std::string compiler_command(const std::string &path) {
+        std::size_t ind = 0, point = path.size();
+        for (auto i = path.size(); i --> 0;) {
+            if (point == path.size() && path[i] == '.') point = i;
+            if (path[i] == '/' || path[i] == '\\') {
+                ind = i;
+                break;
+            }
+        }
+        cache.init(path.substr(0, ind));
         std::string command;
         std::string buf, out;
-        if (get_c() == GNU) command = "g++ -E " + path + " -o main.o";
-        else if (get_c() == CLANG) command = "clang -E " + path + " -o main.o";
-        else {
+        const std::string path_to_preprocessed_file = cache() + path.substr(ind, point - ind) + ".i";
+#if defined(VERBOSE)
+        std::cout << "path to cache: " << cache() << '\n';
+        std::cout << "path to preprocessed file: " << path_to_preprocessed_file << '\n';
+#endif
+        if (get_c() == GNU) command = "g++ -E " + path + " -o " + path_to_preprocessed_file;
+        else if (get_c() == CLANG) command = "clang -E " + path + " -o " + path_to_preprocessed_file;
+        else if (get_c() == MSC){
             command = "cl /P " + path;
-            path = path.substr(0, path.length() - 2);
         }
+        else throw std::runtime_error("unknown compiler, install gcc, clang or MSC");
         system(command.c_str());
-        std::ifstream file((get_c() == MSC) ? path + ".i" : "main.o");
+        std::ifstream file((get_c() == MSC) ? path.substr(0, path.length() - 2) + ".i" : "main.o");
         while (file >> buf) out += buf + ' ';
+        file.close();
         return out;
     }
 
@@ -77,4 +110,4 @@ namespace parse {
 
     };
 }
-//#endif //CODETEST_CFGPARSER_H
+#endif //CODETEST_CFGPARSER_H
