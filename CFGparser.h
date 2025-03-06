@@ -1,5 +1,5 @@
 //
-// Created by xm200 on 05.03.2025.
+// Created by xm200 on 05.03.2025. =uwu=
 //
 
 #ifndef CODE_TEST_CFG_PARSER_H
@@ -7,6 +7,9 @@
 
 #include <fstream>
 #include <sstream>
+#include <utility>
+#include <string>
+#include <vector>
 namespace parse {
 
     inline std::string file_name, file_type;
@@ -95,8 +98,25 @@ namespace parse {
 
 
 
+    struct node_t {
+        std::string name;
+        std::vector<node_t *> children{};
+        size_t l{}, r{};
+        node_t(std::string &&n, const std::size_t &b, const std::size_t &e) : name(std::move(n)), l(b), r(e) {}
+        node_t() = default;
+    };
+
+
+
     class parser {
+        const std::vector<std::string> *c;
         public:
+        explicit parser(const std::vector<std::string> &code) {
+            c = &code;
+            root.name = "root";
+            root.l = 0;
+            root.r = c->size();
+        }
         static void parse(const std::vector<std::string> &code,
                           const size_t len,
                           const size_t l = 0,
@@ -104,7 +124,7 @@ namespace parse {
             #if defined(DEBUG_MODE)
                 if (l >= code.size()) throw
                             std::length_error("Unreachable start limit in function parse()");
-                if (l + len >= code.size()) throw
+                if (l + len > code.size()) throw
                             std::length_error("Unreachable end limit in function parse()");
             #endif
 
@@ -119,7 +139,7 @@ namespace parse {
                     case ELSE:
                     case FOR:
                     case WHILE: {
-                        get_code_block(code, l + 1); /// todo: add different level parsing
+                        // get_code_block(code, l + 1); /// to do: add different level parsing
                         break;
                     }
                     default:
@@ -128,6 +148,8 @@ namespace parse {
             }
         }
     protected:
+        node_t root;
+
         [[nodiscard]] static size_t get_spaces(const std::string &buf) {
             size_t spaces = 0;
             for (auto &s : buf) if (s == ' ') ++spaces; else break;
@@ -144,8 +166,6 @@ namespace parse {
             for (size_t i = l; i < code.size(); ++i) if (get_spaces(code[i]) < block_spaces) return i - l;
             return code.size() - l;
         }
-
-
 
     private:
         enum search {
