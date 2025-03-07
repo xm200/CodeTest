@@ -69,7 +69,7 @@ namespace parse {
 
 
 
-    inline std::vector<std::string> read_file(const std::string &path) {
+    inline std::vector<std::string> *read_file(const std::string &path) {
         std::size_t ind = -1, point = path.size();
         for (auto i = path.size(); i --> 0;) {
             if (point == path.size() && path[i] == '.') point = i;
@@ -83,16 +83,16 @@ namespace parse {
         file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
 
         std::string buf;
-        std::vector<std::string> out;
+        auto *out = new std::vector<std::string>;
         std::ifstream file(path);
-        while (std::getline(file, buf)) out.push_back(buf);
+        while (std::getline(file, buf)) out->push_back(buf);
         file.close();
 
         #if defined(VERBOSE)
             std::cout << "path to cache: " << cache() << '\n';
             std::cout << "file name: " << file_name << '\n';
             std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
-            std::cout << "code have " << out.size() << " lines\n";
+            std::cout << "code have " << out->size() << " lines\n";
         #endif
 
         return out;
@@ -108,19 +108,25 @@ namespace parse {
         node_t() = default;
     };
 
-
-
     class parser {
-        const std::vector<std::string> *code;
+         const std::vector<std::string> *code;
 
         public:
-        explicit parser(const std::vector<std::string> &code_) {
-            code = &code_;
+        explicit parser(const std::vector<std::string> *code_) {
+//            code = new std::vector<std::string>;
+//            *code = code_;
+            code = code_;
             root = new node_t("root", 0, code->size());
         }
 
         void parse() {
             parse(root);
+        }
+
+        void tree() {
+            std::string s;
+            tree(root, s);
+            std::cout << std::flush;
         }
 
     protected:
@@ -162,8 +168,13 @@ namespace parse {
                     case ELSE:
                     case FOR:
                     case WHILE: {
-                        auto *child = new node_t(code->operator[](i), i + 1, get_code_block(i + 1));
+                        auto *child = new node_t(
+                                code->operator[](i).substr(get_spaces(code->operator[](i))),
+                                i + 1,
+                                get_code_block(i + 1));
+                        node->children.push_back(child);
                         parse(child, depth + 1);
+                        i += child->len;
                         break;
                     }
                     default:
@@ -176,6 +187,20 @@ namespace parse {
         enum search {
             IF, ELIF, ELSE, FOR, WHILE, ANOTHER
         };
+
+        static void tree(node_t *_root, std::string &move) {
+
+            std::cout << move << _root->name + '\n';
+            auto move_new = move;
+            if (!move_new.empty()) {
+                for (auto i = move_new.size(); i --> move_new.size() - 4; )
+                    move_new[i] = '.';
+            }
+            move_new += "|---";
+            for (auto &vertex : _root->children) {
+                tree(vertex, move_new);
+            }
+        }
 
         // ANOTHER - operators, types, functions calls and all that can be in the code
         static int get_construction_type(const std::string &buf) {

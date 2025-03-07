@@ -65,6 +65,6 @@ int main() {
     const std::string path = "test.py";
     parse::parser p(parse::read_file(path));
     p.parse();
-//    for (auto &i : data) std::cout << i << '\n';
+    p.tree();
     return 0;
 }
