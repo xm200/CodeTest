@@ -62,9 +62,9 @@ struct Graph {
     }
 };
 int main() {
-    const std::string path = "./test.py";
-    auto data = parse::read_file(path);
-    parse::parser::parse(data, data.size());
-    for (auto &i : data) std::cout << i << '\n';
+    const std::string path = "test.py";
+    parse::parser p(parse::read_file(path));
+    p.parse();
+//    for (auto &i : data) std::cout << i << '\n';
     return 0;
 }

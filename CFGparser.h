@@ -39,9 +39,11 @@ namespace parse {
             #endif
 
             if (way.empty()) path = way;
-            else path = way + '/';
+            else if constexpr (get_os() == LINUX || get_os() == MACOS) path = way + '/';
+            else path = way + '\\';
 
-            path += "cache/";
+            if constexpr (get_os() == LINUX || get_os() == MACOS) path += "cache/";
+            else path += "cache\\";
             system(("mkdir " + path).c_str());
             inited = true;
         }
@@ -49,8 +51,8 @@ namespace parse {
         ~cache_t() {
             if (!inited) return;
             #if !defined(DO_NOT_REMOVE_CACHE)
-                if constexpr (get_os() == WIN) system("rd /s /q cache"); // Remove dir
-                if constexpr (get_os() == LINUX || get_os() == MACOS) system("rm -rf cache");
+                if constexpr (get_os() == LINUX || get_os() == MACOS) system(("rm -rf " + path).c_str());
+                else system(("rd /s /q " + path).c_str()); // Remove dir
             #endif
         }
         const std::string &operator()() const {
@@ -68,7 +70,7 @@ namespace parse {
 
 
     inline std::vector<std::string> read_file(const std::string &path) {
-        std::size_t ind = 0, point = path.size();
+        std::size_t ind = -1, point = path.size();
         for (auto i = path.size(); i --> 0;) {
             if (point == path.size() && path[i] == '.') point = i;
             if (path[i] == '/' || path[i] == '\\') {
@@ -77,7 +79,7 @@ namespace parse {
             }
         }
 
-        cache.init(path.substr(0, ind));
+        cache.init(path.substr(0, (ind == -1 ? 0 : ind)));
         file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
 
         std::string buf;
@@ -89,7 +91,7 @@ namespace parse {
         #if defined(VERBOSE)
             std::cout << "path to cache: " << cache() << '\n';
             std::cout << "file name: " << file_name << '\n';
-            std::cout << "file type: " << (file_type.empty() ? "*none*":file_type) << '\n';
+            std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
             std::cout << "code have " << out.size() << " lines\n";
         #endif
 
@@ -101,36 +103,57 @@ namespace parse {
     struct node_t {
         std::string name;
         std::vector<node_t *> children{};
-        size_t l{}, r{};
-        node_t(std::string &&n, const std::size_t &b, const std::size_t &e) : name(std::move(n)), l(b), r(e) {}
+        size_t l{}, len{};
+        node_t(std::string n, const std::size_t b, const std::size_t e) : name(std::move(n)), l(b), len(e) {}
         node_t() = default;
     };
 
 
 
     class parser {
-        const std::vector<std::string> *c;
+        const std::vector<std::string> *code;
+
         public:
-        explicit parser(const std::vector<std::string> &code) {
-            c = &code;
-            root.name = "root";
-            root.l = 0;
-            root.r = c->size();
+        explicit parser(const std::vector<std::string> &code_) {
+            code = &code_;
+            root = new node_t("root", 0, code->size());
         }
-        static void parse(const std::vector<std::string> &code,
-                          const size_t len,
-                          const size_t l = 0,
-                          const size_t depth = 0) {
+
+        void parse() {
+            parse(root);
+        }
+
+    protected:
+        node_t *root;
+
+        [[nodiscard]] static size_t get_spaces(const std::string &buf) {
+            size_t spaces = 0;
+            for (auto &s : buf) if (s == ' ') ++spaces; else break;
+            return spaces;
+        }
+
+        [[nodiscard]] size_t get_code_block(const size_t l = 0) const {
+        #if defined(DEBUG_MODE)
+                if (l >= code->size()) throw
+                        std::length_error("Unreachable start limit in function get_code_block()");
+        #endif
+
+            const size_t block_spaces = get_spaces(code->operator[](l));
+            for (size_t i = l; i < code->size(); ++i) if (get_spaces(code->operator[](i)) < block_spaces) return i - l;
+            return code->size() - l;
+        }
+
+        void parse(node_t *node, const size_t depth = 0) {
             #if defined(DEBUG_MODE)
-                if (l >= code.size()) throw
+                if (node->l >= code->size()) throw
                             std::length_error("Unreachable start limit in function parse()");
-                if (l + len > code.size()) throw
+                if (node->l + node->len > code->size()) throw
                             std::length_error("Unreachable end limit in function parse()");
             #endif
 
-            for (auto i = l; i < l + len; ++i) {
+            for (auto i = node->l; i < node->l + node->len; ++i) {
                 std::string first_word;
-                auto expr = std::stringstream(code[i]);
+                auto expr = std::stringstream(code->operator[](i));
                 expr >> first_word;
 
                 switch (get_construction_type(first_word)) {
@@ -139,32 +162,14 @@ namespace parse {
                     case ELSE:
                     case FOR:
                     case WHILE: {
-                        // get_code_block(code, l + 1); /// to do: add different level parsing
+                        auto *child = new node_t(code->operator[](i), i + 1, get_code_block(i + 1));
+                        parse(child, depth + 1);
                         break;
                     }
                     default:
                         break;
                 }
             }
-        }
-    protected:
-        node_t root;
-
-        [[nodiscard]] static size_t get_spaces(const std::string &buf) {
-            size_t spaces = 0;
-            for (auto &s : buf) if (s == ' ') ++spaces; else break;
-            return spaces;
-        }
-
-        [[nodiscard]] static size_t get_code_block(const std::vector<std::string> &code, const size_t l = 0) {
-        #if defined(DEBUG_MODE)
-                if (l >= code.size()) throw
-                        std::length_error("Unreachable start limit in function get_code_block()");
-        #endif
-
-            const size_t block_spaces = get_spaces(code[l]);
-            for (size_t i = l; i < code.size(); ++i) if (get_spaces(code[i]) < block_spaces) return i - l;
-            return code.size() - l;
         }
 
     private:
