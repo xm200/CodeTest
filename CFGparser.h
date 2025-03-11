@@ -10,6 +10,7 @@
 #include <utility>
 #include <string>
 #include <vector>
+
 namespace parse {
 
     inline std::string file_name, file_type;
@@ -55,6 +56,7 @@ namespace parse {
                 else system(("rd /s /q " + path).c_str()); // Remove dir
             #endif
         }
+
         const std::string &operator()() const {
             #if defined(DEBUG_MODE)
                 if (!inited) throw std::logic_error("cache dir does not exists");
@@ -98,7 +100,10 @@ namespace parse {
         return out;
     }
 
+    struct variables {
+        std::vector<interval::interval<std::any>> variables{};
 
+    };
 
     struct node_t {
         std::string name;
@@ -109,14 +114,12 @@ namespace parse {
     };
 
     class parser {
-         const std::vector<std::string> *code;
-
-        public:
-        explicit parser(const std::vector<std::string> *code_) {
-//            code = new std::vector<std::string>;
-//            *code = code_;
+        const std::vector<std::string> *code;
+    public:
+        explicit parser(const std::vector<std::string> *code_, bool gm) {
             code = code_;
             root = new node_t("root", 0, code->size());
+            graph_mode = gm;
         }
 
         void parse() {
@@ -129,8 +132,44 @@ namespace parse {
             std::cout << std::flush;
         }
 
+        void parse_bfs() {
+            std::queue<node_t *> q;
+            q.push(root);
+
+            while (!q.empty()) {
+                node_t *_root = q.front();
+                q.pop();
+
+                for (auto i = _root->l; i < _root->l + _root->len; ++i) {
+                    std::string first_word;
+                    auto expr = std::stringstream(code->operator[](i));
+                    expr >> first_word;
+
+                    switch (get_construction_type(first_word)) {
+                        case IF:
+                        case ELIF:
+                        case ELSE:
+                        case FOR:
+                        case WHILE: {
+                            auto *child = new node_t(
+                                    code->operator[](i).substr(get_spaces(code->operator[](i))),
+                                    i + 1,
+                                    get_code_block(i + 1));
+                            _root->children.push_back(child);
+                            q.push(child);
+                            i += get_code_block(i + 1);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+
     protected:
         node_t *root;
+        bool graph_mode;
 
         [[nodiscard]] static size_t get_spaces(const std::string &buf) {
             size_t spaces = 0;
@@ -189,7 +228,6 @@ namespace parse {
         };
 
         static void tree(node_t *_root, std::string &move) {
-
             std::cout << move << _root->name + '\n';
             auto move_new = move;
             if (!move_new.empty()) {

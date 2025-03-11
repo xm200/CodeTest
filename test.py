@@ -2,6 +2,8 @@ a = 3
 b = a + 3
 c = int(input())
 print(c)
+
+
 if c == "GOIIIIIIIIIDAAAAAAAAAA":
     if a == 3:
         print(c)

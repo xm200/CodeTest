@@ -61,10 +61,15 @@ struct Graph {
         _dfs(start);
     }
 };
-int main() {
+int main(int argc, char *argv[]) {
     const std::string path = "test.py";
-    parse::parser p(parse::read_file(path));
-    p.parse();
+#if defined(DEBUG_MODE)
+    if (argc < 2) {
+        throw std::logic_error("Proceed test generation mode");
+    }
+#endif
+    parse::parser p(parse::read_file(path), (argv[1] == "DFS"));
+    p.parse_bfs();
     p.tree();
     return 0;
 }
