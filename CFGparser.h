@@ -123,7 +123,8 @@ namespace parse {
         }
 
         void parse() {
-            parse(root);
+            if (graph_mode) parse(root);
+            else parse_bfs();
         }
 
         void tree() {
@@ -131,6 +132,10 @@ namespace parse {
             tree(root, s);
             std::cout << std::flush;
         }
+
+    protected:
+        node_t *root;
+        bool graph_mode;
 
         void parse_bfs() {
             std::queue<node_t *> q;
@@ -166,10 +171,6 @@ namespace parse {
                 }
             }
         }
-
-    protected:
-        node_t *root;
-        bool graph_mode;
 
         [[nodiscard]] static size_t get_spaces(const std::string &buf) {
             size_t spaces = 0;

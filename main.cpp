@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
     parse::parser p(parse::read_file(path), (argv[1] == "DFS"));
-    p.parse_bfs();
+    p.parse();
     p.tree();
     return 0;
 }
