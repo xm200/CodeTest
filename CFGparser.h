@@ -100,10 +100,14 @@ namespace parse {
         return out;
     }
 
+
+
     struct variables {
-        std::vector<interval::interval<std::any>> variables{};
+        std::vector<std::any> v{};
 
     };
+
+
 
     struct node_t {
         std::string name;
@@ -113,10 +117,12 @@ namespace parse {
         node_t() = default;
     };
 
+
+
     class parser {
         const std::vector<std::string> *code;
     public:
-        explicit parser(const std::vector<std::string> *code_, bool gm) {
+        explicit parser(const std::vector<std::string> *code_, const bool gm) {
             code = code_;
             root = new node_t("root", 0, code->size());
             graph_mode = gm;
@@ -156,12 +162,11 @@ namespace parse {
                         case ELSE:
                         case FOR:
                         case WHILE: {
-                            auto *child = new node_t(
+                            _root->children.push_back(new node_t(
                                     code->operator[](i).substr(get_spaces(code->operator[](i))),
                                     i + 1,
-                                    get_code_block(i + 1));
-                            _root->children.push_back(child);
-                            q.push(child);
+                                    get_code_block(i + 1)));
+                            q.push(_root->children.back());
                             i += get_code_block(i + 1);
                             break;
                         }
