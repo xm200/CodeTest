@@ -10,6 +10,7 @@
 #include <utility>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace parse {
 
@@ -18,6 +19,11 @@ namespace parse {
     enum os {
         LINUX, MACOS, WIN
     };
+
+    enum operators {
+        LT, GT, LE, GE, EQ, NE, NOT_OPERATOR
+    };
+
     constexpr short get_os() {
         #if defined(__linux__)
             return LINUX;
@@ -27,8 +33,6 @@ namespace parse {
             return MACOS;
         #endif
     }
-
-
 
     struct cache_t {
         void init(const std::string &way) {
@@ -103,7 +107,7 @@ namespace parse {
 
 
     struct variables {
-        std::vector<std::any> v{};
+        std::map<std::string, std::any> v{};
 
     };
 
@@ -116,6 +120,7 @@ namespace parse {
         node_t(std::string n, const std::size_t b, const std::size_t e) : name(std::move(n)), l(b), len(e) {}
         node_t() = default;
     };
+
 
 
 
@@ -142,6 +147,30 @@ namespace parse {
     protected:
         node_t *root;
         bool graph_mode;
+
+        inline short get_op(const std::string &buf) {
+            if (buf == "<") return LT;
+            if (buf == ">") return GT;
+            if (buf == "<=") return LE;
+            if (buf == ">=") return GE;
+            if (buf == "==") return EQ;
+            if (buf == "!=") return NE;
+            else return NOT_OPERATOR;
+        }
+
+        short parse_expr(const std::string &buf, node_t &node) {
+            auto ss = std::stringstream(buf);
+            int i = 0;
+            while (i < buf.size()) {
+                std::string word;
+                ss >> word;
+                if (get_op(word) == NOT_OPERATOR) {
+                    continue; /// to do: add variable saving
+                } else {
+                    continue; /// to do: add test generation
+                }
+            }
+        };
 
         void parse_bfs() {
             std::queue<node_t *> q;
