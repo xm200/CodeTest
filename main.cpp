@@ -63,11 +63,11 @@ struct Graph {
 };
 int main(int argc, char *argv[]) {
     const std::string path = "test.py";
-#if defined(DEBUG_MODE)
-    if (argc < 2) {
-        throw std::logic_error("Proceed test generation mode");
-    }
-#endif
+//#if defined(DEBUG_MODE)
+//    if (argc < 2) {
+//        throw std::logic_error("Proceed test generation mode");
+//    }
+//#endif
     parse::parser p(parse::read_file(path), (argv[1] == "DFS"));
     p.parse();
     p.tree();

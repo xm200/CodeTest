@@ -107,14 +107,32 @@ namespace parse {
     struct basic_variable {
         std::any value;
 
-        void get_type(const std::string &declaration_string) {
-            auto ss = std::stringstream (declaration_string);
-            std::string word;
-            size_t i = 0;
-            while (i < declaration_string.size()) {
-                ss >> word;
-                /// todo: add type extracting
-                i += word.size();
+        enum types { INT, DOUBLE, STRING, UNKNOWN };
+
+        inline char tolower(char c) {
+            return (c > 'A' && c < 'Z') ? static_cast<char> (c - 'a' + 'A') : c;
+        }
+
+        short get_type(const std::string &s) {
+            bool is_str = false;
+            std::string alp("ghijklmnopqrstuvwxyz");
+            for (auto &c : s) is_str |= (alp.find(tolower(c)) == -1);
+            if (is_str) return STRING;
+            if (s.find('.') == -1) return INT;
+            if (s.find('.') != -1) return DOUBLE;
+            else return UNKNOWN;
+        }
+
+        // get string with value - return type of value
+        std::variant<int, double, std::string> mega_cast(const std::string &s) {
+            // cast variable to normal type
+            switch (get_type(s)) {
+                #if defined(DEBUG_MODE)
+                    case UNKNOWN: throw std::logic_error("Unknown type found! FIX");
+                #endif
+                case INT: return std::stoi(s);
+                case DOUBLE: return std::stod(s);
+                default: return s;
             }
         }
 
@@ -124,7 +142,7 @@ namespace parse {
         ~basic_variable() = default;
 
         /// todo: make normal constructor with type casting from sources
-        explicit basic_variable (std::any &value_from_code) : value(value_from_code) {};
+        explicit basic_variable (std::string &value_from_code) : value(mega_cast(value_from_code)) {};
 
     };
 
@@ -136,17 +154,14 @@ namespace parse {
         std::map<std::string, std::variant<basic_variable, constructable_variable>> v{};
     };
 
-
-
     struct node_t {
         std::string name;
         std::vector<node_t *> children{};
+        variables vars;
         size_t l{}, len{};
         node_t(std::string n, const std::size_t b, const std::size_t e) : name(std::move(n)), l(b), len(e) {}
         node_t() = default;
     };
-
-
 
 
     class parser {
@@ -190,9 +205,9 @@ namespace parse {
                 std::string word;
                 ss >> word;
                 if (get_op(word) == NOT_OPERATOR) {
-                    continue; /// to do: add variable saving
+                    continue; //node.vars(word); /// todo: add variable saving
                 } else {
-                    continue; /// to do: add test generation
+                    continue; /// todo: add test generation
                 }
             }
         };
