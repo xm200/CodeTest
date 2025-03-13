@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <any>
+#include <queue>
 
 namespace parse {
 
@@ -74,7 +76,6 @@ namespace parse {
     } inline cache;
 
 
-
     inline std::vector<std::string> *read_file(const std::string &path) {
         std::size_t ind = -1, point = path.size();
         for (auto i = path.size(); i --> 0;) {
@@ -105,39 +106,14 @@ namespace parse {
     }
 
     struct basic_variable {
-        inline char tolower(char c) { return (c > 'A' && c < 'Z') ? static_cast<char> (c - 'a' + 'A') : c; }
-
-        short get_type(const std::string &s) {
-            if (s.find("\'") != -1 || s.find("\"")) return STRING;
-            if (s.find('.') == -1) return INT;
-            if (s.find('.') != -1) return DOUBLE;
-            else return UNKNOWN;
-        }
-
-        // get string with value - return type of value
-        std::variant<int, double, std::string> mega_cast(const std::string &s) {
-            // cast variable to normal type
-            switch (get_type(s)) {
-                #if defined(DEBUG_MODE)
-                    case UNKNOWN: throw std::logic_error("Unknown type found! FIX");
-                #endif
-                case INT: return std::stoi(s);
-                case DOUBLE: return std::stod(s);
-                default: return s;
-            }
-        }
+        [[nodiscard]] inline static char tolower(const char c) { return (c > 'A' && c < 'Z') ? static_cast<char> (c - 'a' + 'A') : c; }
 
         void generate_value() {} /// todo: ask fedor
 
         void print() {
-            try { std::cout << std::get<int>(value); }
-            catch (std::bad_variant_access const &ex) {
-                try { std::cout << std::get<double>(value); }
-                catch (std::bad_variant_access const &ex2) {
-                    std::cout << std::get<std::string>(value);
-                }
-            }
-
+            if (const int *pvi = std::get_if<int>(&value)) std::cout << *pvi;
+            else if (const double *pvd = std::get_if<double>(&value)) std::cout << *pvd;
+            else if (const int *pvs = std::get_if<int>(&value)) std::cout << *pvs;
             std::cout << ' ';
         }
 
@@ -149,21 +125,31 @@ namespace parse {
     private:
         std::variant<int, double, std::string> value;
         enum types { INT, DOUBLE, STRING, UNKNOWN };
-    };
+    protected:
+        // get string with value - return type of value
+        [[nodiscard]] static inline std::variant<int, double, std::string> mega_cast(const std::string &s) {
+            // cast variable to normal type
+            switch (get_type(s)) {
+                #if defined(DEBUG_MODE)
+                    case UNKNOWN: throw std::logic_error("Function mega_cast : unknown type found!");
+                #endif
+                case INT: return std::stoi(s);
+                case DOUBLE: return std::stod(s);
+                default: return s;
+            }
+        }
 
-    struct constructable_variable {
-        std::vector<basic_variable> variables;
+        [[nodiscard]] static short get_type(const std::string &s) {
+            if (s.find("\'") != -1 || s.find("\"") != -1) return STRING;
+            if (s.find('.') == -1) return INT;
+            if (s.find('.') != -1) return DOUBLE;
+            else return UNKNOWN;
+        }
 
-        inline void add_variable(const std::string &str) { variables.emplace_back(str); }
-
-        inline void print() { for (auto &x : variables) x.print(); }
-
-        constructable_variable() = default;
-        ~constructable_variable() = default;
     };
 
     struct variables {
-        std::map<std::string, std::variant<basic_variable, constructable_variable>> v{};
+        std::map<std::string, std::variant<basic_variable>> v{};
 
         inline void add_var(const std::string &name, const std::string &val) {
             v[name] = basic_variable(val); /// todo: add compose structures saving
@@ -208,7 +194,7 @@ namespace parse {
         node_t *root;
         bool graph_mode;
 
-        inline short get_op(const std::string &buf) {
+        [[ nodiscard ]] inline short get_op(const std::string &buf) {
             if (buf == "<") return LT;
             if (buf == ">") return GT;
             if (buf == "<=") return LE;
@@ -218,7 +204,7 @@ namespace parse {
             else return NOT_OPERATOR;
         }
 
-        short parse_expr(const std::string &buf, node_t &node) { ///todo: think about if, elif, else, +=, -=, ..., not only assign
+        static void parse_expr(const std::string &buf, node_t &node) { ///todo: think about if, elif, else, +=, -=, ..., not only assign
             auto ss = std::stringstream(buf);
             std::vector<std::string> expression;
             std::string word;
@@ -261,13 +247,13 @@ namespace parse {
             }
         }
 
-        [[nodiscard]] static size_t get_spaces(const std::string &buf) {
+        [[ nodiscard ]] static size_t get_spaces(const std::string &buf) {
             size_t spaces = 0;
             for (auto &s : buf) if (s == ' ') ++spaces; else break;
             return spaces;
         }
 
-        [[nodiscard]] size_t get_code_block(const size_t l = 0) const {
+        [[ nodiscard ]] size_t get_code_block(const size_t l = 0) const {
         #if defined(DEBUG_MODE)
                 if (l >= code->size()) throw
                         std::length_error("Unreachable start limit in function get_code_block()");
@@ -331,7 +317,7 @@ namespace parse {
         }
 
         // ANOTHER - operators, types, functions calls and all that can be in the code
-        static int get_construction_type(const std::string &buf) {
+        [[ nodiscard ]] static inline int get_construction_type(const std::string &buf) {
             if (buf == "if") return IF;
             if (buf == "elif") return ELIF;
             if (buf == "else" || buf == "else:") return ELSE;
