@@ -105,10 +105,32 @@ namespace parse {
     }
 
 
+    struct basic_variable {
+        std::any value;
+
+        void get_type() {
+            return;
+        }
+
+        void generate_value() {
+            return;
+        }
+
+        basic_variable() = default;
+        ~basic_variable() = default;
+
+
+        /// todo: make constructor with type casting from sources
+        basic_variable(std::any value_from_code) () {}
+
+    };
+
+    struct constructable_variable {
+        std::vector<basic_variable> variables;
+    };
 
     struct variables {
-        std::map<std::string, std::any> v{};
-
+        std::map<std::string, std::variant<basic_variable, constructable_variable>> v{};
     };
 
 
