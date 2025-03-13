@@ -71,7 +71,8 @@ int main(int argc, char *argv[]) {
     parse::parser p(parse::read_file(path), (argv[1] == "DFS"));
     p.parse();
 //    p.tree();
-    parse::basic_variable test(s);
-    test.print();
+    std::string s = "1234";
+    std::string s2 = "0x1234a";
+
     return 0;
 }

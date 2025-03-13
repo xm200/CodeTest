@@ -105,13 +105,7 @@ namespace parse {
     }
 
     struct basic_variable {
-        std::variant<int, double, std::string> value;
-
-        enum types { INT, DOUBLE, STRING, UNKNOWN };
-
-        inline char tolower(char c) {
-            return (c > 'A' && c < 'Z') ? static_cast<char> (c - 'a' + 'A') : c;
-        }
+        inline char tolower(char c) { return (c > 'A' && c < 'Z') ? static_cast<char> (c - 'a' + 'A') : c; }
 
         short get_type(const std::string &s) {
             if (s.find("\'") != -1 || s.find("\"")) return STRING;
@@ -133,7 +127,7 @@ namespace parse {
             }
         }
 
-        void generate_value() {}
+        void generate_value() {} /// todo: ask fedor
 
         void print() {
             try { std::cout << std::get<int>(value); }
@@ -143,28 +137,47 @@ namespace parse {
                     std::cout << std::get<std::string>(value);
                 }
             }
+
+            std::cout << ' ';
         }
 
         basic_variable() = default;
+
+        explicit basic_variable (const std::string &value_from_code) { value = mega_cast(value_from_code); }
+
         ~basic_variable() = default;
-
-        /// todo: make normal constructor with type casting from sources
-        explicit basic_variable (std::string &value_from_code) { value = mega_cast(value_from_code); }
-
+    private:
+        std::variant<int, double, std::string> value;
+        enum types { INT, DOUBLE, STRING, UNKNOWN };
     };
 
     struct constructable_variable {
         std::vector<basic_variable> variables;
+
+        inline void add_variable(const std::string &str) { variables.emplace_back(str); }
+
+        inline void print() { for (auto &x : variables) x.print(); }
+
+        constructable_variable() = default;
+        ~constructable_variable() = default;
     };
 
     struct variables {
         std::map<std::string, std::variant<basic_variable, constructable_variable>> v{};
+
+        inline void add_var(const std::string &name, const std::string &val) {
+            v[name] = basic_variable(val); /// todo: add compose structures saving
+        }
+
+        variables() = default;
+        ~variables() = default;
+
     };
 
     struct node_t {
         std::string name;
         std::vector<node_t *> children{};
-        variables vars;
+        variables vars{};
         size_t l{}, len{};
         node_t(std::string n, const std::size_t b, const std::size_t e) : name(std::move(n)), l(b), len(e) {}
         node_t() = default;
@@ -205,18 +218,12 @@ namespace parse {
             else return NOT_OPERATOR;
         }
 
-        short parse_expr(const std::string &buf, node_t &node) {
+        short parse_expr(const std::string &buf, node_t &node) { ///todo: think about if, elif, else, +=, -=, ..., not only assign
             auto ss = std::stringstream(buf);
-            int i = 0;
-            while (i < buf.size()) {
-                std::string word;
-                ss >> word;
-                if (get_op(word) == NOT_OPERATOR) {
-                    continue; //node.vars(word); /// todo: add variable saving
-                } else {
-                    continue; /// todo: add test generation
-                }
-            }
+            std::vector<std::string> expression;
+            std::string word;
+            while (ss >> word) expression.emplace_back(word);
+            node.vars.add_var(expression[0], expression[expression.size() - 1]);
         };
 
         void parse_bfs() {
@@ -247,6 +254,7 @@ namespace parse {
                             break;
                         }
                         default:
+                            parse_expr(code->operator[](i), *_root);
                             break;
                     }
                 }
