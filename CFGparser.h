@@ -104,24 +104,27 @@ namespace parse {
         return out;
     }
 
-
     struct basic_variable {
         std::any value;
 
-        void get_type() {
-            return;
+        void get_type(const std::string &declaration_string) {
+            auto ss = std::stringstream (declaration_string);
+            std::string word;
+            size_t i = 0;
+            while (i < declaration_string.size()) {
+                ss >> word;
+                /// todo: add type extracting
+                i += word.size();
+            }
         }
 
-        void generate_value() {
-            return;
-        }
+        void generate_value() {}
 
         basic_variable() = default;
         ~basic_variable() = default;
 
-
-        /// todo: make constructor with type casting from sources
-        basic_variable(std::any value_from_code) () {}
+        /// todo: make normal constructor with type casting from sources
+        explicit basic_variable (std::any &value_from_code) : value(value_from_code) {};
 
     };
 
