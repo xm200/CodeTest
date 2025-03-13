@@ -105,7 +105,7 @@ namespace parse {
     }
 
     struct basic_variable {
-        std::any value;
+        std::variant<int, double, std::string> value;
 
         enum types { INT, DOUBLE, STRING, UNKNOWN };
 
@@ -114,10 +114,7 @@ namespace parse {
         }
 
         short get_type(const std::string &s) {
-            bool is_str = false;
-            std::string alp("ghijklmnopqrstuvwxyz");
-            for (auto &c : s) is_str |= (alp.find(tolower(c)) == -1);
-            if (is_str) return STRING;
+            if (s.find("\'") != -1 || s.find("\"")) return STRING;
             if (s.find('.') == -1) return INT;
             if (s.find('.') != -1) return DOUBLE;
             else return UNKNOWN;
@@ -138,11 +135,21 @@ namespace parse {
 
         void generate_value() {}
 
+        void print() {
+            try { std::cout << std::get<int>(value); }
+            catch (std::bad_variant_access const &ex) {
+                try { std::cout << std::get<double>(value); }
+                catch (std::bad_variant_access const &ex2) {
+                    std::cout << std::get<std::string>(value);
+                }
+            }
+        }
+
         basic_variable() = default;
         ~basic_variable() = default;
 
         /// todo: make normal constructor with type casting from sources
-        explicit basic_variable (std::string &value_from_code) : value(mega_cast(value_from_code)) {};
+        explicit basic_variable (std::string &value_from_code) { value = mega_cast(value_from_code); }
 
     };
 

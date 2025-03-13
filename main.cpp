@@ -70,6 +70,8 @@ int main(int argc, char *argv[]) {
 //#endif
     parse::parser p(parse::read_file(path), (argv[1] == "DFS"));
     p.parse();
-    p.tree();
+//    p.tree();
+    parse::basic_variable test(s);
+    test.print();
     return 0;
 }
