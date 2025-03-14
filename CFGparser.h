@@ -13,6 +13,40 @@
 #include <map>
 #include <any>
 #include <queue>
+#include <functional>
+#include <iostream>
+
+namespace custom {
+    struct custom_type {
+        std::any data;
+        std::string name = "undefined name";
+        std::function<bool(const custom_type &, const custom_type &)> less =
+            [this](const custom_type &, const custom_type &)->bool{
+                throw std::logic_error("operator < is not defined for type " + name);
+        };
+        std::function<bool(const custom_type &, const custom_type &)> more =
+            [this](const custom_type &, const custom_type &)->bool{
+                throw std::logic_error("operator > is not defined for type " + name);
+        };
+        std::function<bool(const custom_type &, const custom_type &)> less_equal =
+            [this](const custom_type &, const custom_type &)->bool{
+                throw std::logic_error("operator <= is not defined for type " + name);
+        };
+        std::function<bool(const custom_type &, const custom_type &)> more_equal =
+            [this](const custom_type &, const custom_type &)->bool{
+                throw std::logic_error("operator >= is not defined for type " + name);
+        };
+        std::function<bool(const custom_type &, const custom_type &)> equal =
+            [this](const custom_type &, const custom_type &)->bool{
+                throw std::logic_error("operator == is not defined for type " + name);
+        };
+        std::function<bool(const custom_type &, const custom_type &)> not_equal =
+            [this](const custom_type &, const custom_type &)->bool{
+                throw std::logic_error("operator != is not defined for type " + name);
+        };
+    };
+
+}
 
 namespace parse {
 
@@ -133,6 +167,9 @@ namespace parse {
             code = code_;
             root = new node_t("root", 0, code->size());
             graph_mode = gm;
+            #if defined(VERBOSE)
+                std::cout << "using " << (gm ? "DFS" : "BFS") << " algo\n" << std::flush;
+            #endif
         }
 
         void parse() {
@@ -140,7 +177,7 @@ namespace parse {
             else parse_bfs();
         }
 
-        void tree() {
+        void tree() const {
             std::string s;
             tree(root, s);
             std::cout << std::flush;
@@ -150,31 +187,17 @@ namespace parse {
         node_t *root;
         bool graph_mode;
 
-        inline short get_op(const std::string &buf) {
+        static short get_op(const std::string &buf) {
             if (buf == "<") return LT;
             if (buf == ">") return GT;
             if (buf == "<=") return LE;
             if (buf == ">=") return GE;
             if (buf == "==") return EQ;
             if (buf == "!=") return NE;
-            else return NOT_OPERATOR;
+            return NOT_OPERATOR;
         }
 
-        short parse_expr(const std::string &buf, node_t &node) {
-            auto ss = std::stringstream(buf);
-            int i = 0;
-            while (i < buf.size()) {
-                std::string word;
-                ss >> word;
-                if (get_op(word) == NOT_OPERATOR) {
-                    continue; /// to do: add variable saving
-                } else {
-                    continue; /// to do: add test generation
-                }
-            }
-        };
-
-        void parse_bfs() {
+        void parse_bfs() const {
             std::queue<node_t *> q;
             q.push(root);
 
@@ -264,7 +287,7 @@ namespace parse {
             IF, ELIF, ELSE, FOR, WHILE, ANOTHER
         };
 
-        static void tree(node_t *_root, std::string &move) {
+        static void tree(const node_t *_root, const std::string &move) {
             std::cout << move << _root->name + '\n';
             auto move_new = move;
             if (!move_new.empty()) {
