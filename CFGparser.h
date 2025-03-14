@@ -23,7 +23,7 @@ namespace parse {
     };
 
     enum operators {
-        LT, GT, LE, GE, EQ, NE, NOT_OPERATOR
+        LT, GT, LE, GE, EQ, NE, PLE, PWE, DE, ME, DDE, MLE, NOT_OPERATOR
     };
 
     constexpr short get_os() {
@@ -111,20 +111,22 @@ namespace parse {
         void generate_value() {} /// todo: ask fedor
 
         void print() {
-            if (const int *pvi = std::get_if<int>(&value)) std::cout << *pvi;
-            else if (const double *pvd = std::get_if<double>(&value)) std::cout << *pvd;
-            else if (const int *pvs = std::get_if<int>(&value)) std::cout << *pvs;
+            if (const int *pvi = std::get_if<int>(&start_value)) { std::cout << *pvi; delete pvi; }
+            else if (const double *pvd = std::get_if<double>(&start_value)) { std::cout << *pvd; delete pvd; }
+            else if (const int *pvs = std::get_if<int>(&start_value)) { std::cout << *pvs; delete pvs; }
             std::cout << ' ';
         }
 
         basic_variable() = default;
 
-        explicit basic_variable (const std::string &value_from_code) { value = mega_cast(value_from_code); }
+        explicit basic_variable (const std::string &value_from_code) { start_value = mega_cast(value_from_code); }
 
         ~basic_variable() = default;
     private:
-        std::variant<int, double, std::string> value;
+        std::variant<int, double, std::string> start_value;
+        std::vector<std::string> changes;
         enum types { INT, DOUBLE, STRING, UNKNOWN };
+
     protected:
         // get string with value - return type of value
         [[nodiscard]] static inline std::variant<int, double, std::string> mega_cast(const std::string &s) {
@@ -194,22 +196,27 @@ namespace parse {
         node_t *root;
         bool graph_mode;
 
-        [[ nodiscard ]] inline short get_op(const std::string &buf) {
-            if (buf == "<") return LT;
-            if (buf == ">") return GT;
-            if (buf == "<=") return LE;
-            if (buf == ">=") return GE;
-            if (buf == "==") return EQ;
-            if (buf == "!=") return NE;
-            else return NOT_OPERATOR;
+        [[ nodiscard ]] inline static short get_op(const std::string &buf) {
+            std::map<std::string, short> op = {{"<", LT}, {">", GT}, {"<=", LE}, {">=", GE}, {"==", EQ}, {"**=", PWE},
+                                               {"!=", NE}, {"+=", PLE}, {"-=", ME}, {"/=", DDE}, {"*=", MLE}, {"//=", DE}};
+            try { return op[buf]; }
+            catch (const std::string &err) { return NOT_OPERATOR; }
         }
 
-        static void parse_expr(const std::string &buf, node_t &node) { ///todo: think about if, elif, else, +=, -=, ..., not only assign
+        static void parse_expr(const std::string &buf, node_t &node) { /// todo: think about +=, -=, ..., not only assign
             auto ss = std::stringstream(buf);
-            std::vector<std::string> expression;
+            std::vector<std::string> part1, part2;
+            bool part = false; // false - first, true - second
             std::string word;
-            while (ss >> word) expression.emplace_back(word);
-            node.vars.add_var(expression[0], expression[expression.size() - 1]);
+            while (ss >> word) {
+                if (get_op(word) != EQ) part = true;
+                /// todo: make a += 3 -> a = a + 3; b += a + 3 -> b = b + a + 3;
+
+                if (!part) part1.emplace_back(word);
+                else part2.emplace_back(word);
+            }
+            /// todo: make equation solver
+
         };
 
         void parse_bfs() {

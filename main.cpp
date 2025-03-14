@@ -5,13 +5,13 @@
 
 
 int main(int argc, char *argv[]) {
-#if defined(DEBUG_MODE)
-    if (argc == 3)
-        throw std::runtime_error("Proceed test generation mode");
+#if !defined(DEBUG_MODE)
+    if (argc == 1)
+        throw std::runtime_error("Proceed path or start program with --help");
 #endif
-    const std::string path = argv[argc - 1];
-    parse::parser p(parse::read_file(path), (argv[1] == "DFS"));
+    const std::string path = "test.py";
+    parse::parser p(parse::read_file(path), false);
     p.parse();
-//    p.tree();
+    p.tree();
     return 0;
 }
