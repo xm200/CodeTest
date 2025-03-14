@@ -17,6 +17,46 @@
 #include <iostream>
 
 namespace custom {
+    template<typename T>
+    struct vec_line {
+        const std::vector<T> *vec = nullptr;
+        std::size_t l = 0, len = 0;
+
+        [[nodiscard]] std::size_t size() const { return len; }
+
+        [[nodiscard]] typename std::vector<T>::iterator begin() _GLIBCXX_NOEXCEPT
+        { return vec->begin() + l; }
+        [[nodiscard]] typename std::vector<T>::const_iterator begin() const _GLIBCXX_NOEXCEPT
+        {return vec->cbegin() + l; }
+
+        [[nodiscard]] typename std::vector<T>::iterator end() _GLIBCXX_NOEXCEPT
+        { return vec->begin() + l + len; }
+        [[nodiscard]] typename std::vector<T>::const_iterator end() const _GLIBCXX_NOEXCEPT
+        {return vec->cbegin() + l + len; }
+
+        [[nodiscard]] T& operator[](std::size_t i) _GLIBCXX_NOEXCEPT {
+            #if defined(DEBUG_MODE)
+                if (i >= len) throw std::out_of_range("index out of range");
+            #endif
+            return vec->operator[](i) + l;
+        }
+        [[nodiscard]] T& operator[](std::size_t i) const _GLIBCXX_NOEXCEPT {
+            #if defined(DEBUG_MODE)
+                if (i >= len) throw std::out_of_range("index out of range");
+            #endif
+            return vec->operator[](i) + l;
+        }
+    };
+
+    template<typename T>
+    vec_line<T> vl_substr(const std::vector<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+        return {&vec, pos, std::min(len, vec.size() - pos)};
+    }
+    template<typename T>
+    vec_line<T> vl_substr(const vec_line<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+        return {vec.vec, pos + vec.l, std::min(len, vec.size() - pos - vec.l)};
+    }
+
     struct custom_type {
         std::any data;
         std::string name = "undefined name";
