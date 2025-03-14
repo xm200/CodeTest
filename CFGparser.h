@@ -13,6 +13,8 @@
 #include <map>
 #include <any>
 #include <queue>
+#include <variant>
+#include <iostream>
 
 namespace parse {
 
@@ -111,9 +113,9 @@ namespace parse {
         void generate_value() {} /// todo: ask fedor
 
         void print() {
-            if (const int *pvi = std::get_if<int>(&start_value)) { std::cout << *pvi; delete pvi; }
-            else if (const double *pvd = std::get_if<double>(&start_value)) { std::cout << *pvd; delete pvd; }
-            else if (const int *pvs = std::get_if<int>(&start_value)) { std::cout << *pvs; delete pvs; }
+            if (const int *pvi = std::get_if<int>(&start_value)) { std::cout << *pvi;}
+            else if (const double *pvd = std::get_if<double>(&start_value)) { std::cout << *pvd; }
+            else if (const int *pvs = std::get_if<int>(&start_value)) { std::cout << *pvs; }
             std::cout << ' ';
         }
 
@@ -128,44 +130,32 @@ namespace parse {
         enum types { INT, DOUBLE, STRING, UNKNOWN };
 
     protected:
-        // get string with value - return type of value
+        [[nodiscard]] static short get_type(const std::string &s) {
+            if (s[0] == '\'' || s[s.size() - 1] == '\'' || s[0] == '\"' || s[s.size() - 1] == '\"') return STRING;
+            bool has_dot = false;
+            for (auto chr: s) {
+                if ((chr > '9' || chr < '0') && chr != '.') return UNKNOWN;
+                if (chr == '.') {
+                    if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
+                    else has_dot = true;
+                }
+            }
+            return (has_dot) ? DOUBLE : INT;
+        }
+
         [[nodiscard]] static inline std::variant<int, double, std::string> mega_cast(const std::string &s) {
-            // cast variable to normal type
             switch (get_type(s)) {
-                #if defined(DEBUG_MODE)
-                    case UNKNOWN: throw std::logic_error("Function mega_cast : unknown type found!");
-                #endif
+                case UNKNOWN: throw std::runtime_error("Function mega_cast() : got unknown type!");
                 case INT: return std::stoi(s);
                 case DOUBLE: return std::stod(s);
                 default: return s;
             }
         }
-
-        [[nodiscard]] static short get_type(const std::string &s) {
-            if (s.find("\'") != -1 || s.find("\"") != -1) return STRING;
-            if (s.find('.') == -1) return INT;
-            if (s.find('.') != -1) return DOUBLE;
-            else return UNKNOWN;
-        }
-
-    };
-
-    struct variables {
-        std::map<std::string, std::variant<basic_variable>> v{};
-
-        inline void add_var(const std::string &name, const std::string &val) {
-            v[name] = basic_variable(val); /// todo: add compose structures saving
-        }
-
-        variables() = default;
-        ~variables() = default;
-
     };
 
     struct node_t {
         std::string name;
         std::vector<node_t *> children{};
-        variables vars{};
         size_t l{}, len{};
         node_t(std::string n, const std::size_t b, const std::size_t e) : name(std::move(n)), l(b), len(e) {}
         node_t() = default;
@@ -247,7 +237,7 @@ namespace parse {
                             break;
                         }
                         default:
-                            parse_expr(code->operator[](i), *_root);
+//                            parse_expr(code->operator[](i), *_root);
                             break;
                     }
                 }
