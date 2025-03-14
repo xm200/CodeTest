@@ -113,9 +113,9 @@ namespace parse {
         void generate_value() {} /// todo: ask fedor
 
         void print() {
-            if (const int *pvi = std::get_if<int>(&start_value)) { std::cout << *pvi;}
-            else if (const double *pvd = std::get_if<double>(&start_value)) { std::cout << *pvd; }
-            else if (const int *pvs = std::get_if<int>(&start_value)) { std::cout << *pvs; }
+            if (const int *pvi = std::get_if<int>(&start_value)) std::cout << *pvi;
+            else if (const double *pvd = std::get_if<double>(&start_value)) std::cout << *pvd;
+            else if (const std::string *pvs = std::get_if<std::string>(&start_value)) std::cout << *pvs;
             std::cout << ' ';
         }
 
@@ -131,14 +131,15 @@ namespace parse {
 
     protected:
         [[nodiscard]] static short get_type(const std::string &s) {
-            if (s[0] == '\'' || s[s.size() - 1] == '\'' || s[0] == '\"' || s[s.size() - 1] == '\"') return STRING;
+            if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
             bool has_dot = false;
+            if (s == ".") return UNKNOWN;
             for (auto chr: s) {
-                if ((chr > '9' || chr < '0') && chr != '.') return UNKNOWN;
                 if (chr == '.') {
                     if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
                     else has_dot = true;
                 }
+                else if (chr > '9' || chr < '0') return UNKNOWN;
             }
             return (has_dot) ? DOUBLE : INT;
         }
@@ -150,6 +151,10 @@ namespace parse {
                 case DOUBLE: return std::stod(s);
                 default: return s;
             }
+        }
+
+        void save_to_history(std::variant<int, double, std::string> ) {
+
         }
     };
 
@@ -186,26 +191,10 @@ namespace parse {
         node_t *root;
         bool graph_mode;
 
-        [[ nodiscard ]] inline static short get_op(const std::string &buf) {
-            std::map<std::string, short> op = {{"<", LT}, {">", GT}, {"<=", LE}, {">=", GE}, {"==", EQ}, {"**=", PWE},
-                                               {"!=", NE}, {"+=", PLE}, {"-=", ME}, {"/=", DDE}, {"*=", MLE}, {"//=", DE}};
-            try { return op[buf]; }
-            catch (const std::string &err) { return NOT_OPERATOR; }
-        }
-
         static void parse_expr(const std::string &buf, node_t &node) { /// todo: think about +=, -=, ..., not only assign
             auto ss = std::stringstream(buf);
             std::vector<std::string> part1, part2;
-            bool part = false; // false - first, true - second
             std::string word;
-            while (ss >> word) {
-                if (get_op(word) != EQ) part = true;
-                /// todo: make a += 3 -> a = a + 3; b += a + 3 -> b = b + a + 3;
-
-                if (!part) part1.emplace_back(word);
-                else part2.emplace_back(word);
-            }
-            /// todo: make equation solver
 
         };
 
