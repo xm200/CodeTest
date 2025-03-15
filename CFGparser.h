@@ -142,7 +142,7 @@ namespace parse {
                     if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
                     else has_dot = true;
                 }
-                else if (chr > '9' || chr < '0') return UNKNOWN;
+                else if ((chr > '9' || chr < '0') && chr != ' ') return UNKNOWN;
             }
             return (has_dot) ? DOUBLE : INT;
         }
@@ -166,7 +166,7 @@ namespace parse {
             std::map<char, char> pairs = {{'(', ')'}, {'[', ']'}};
             std::vector<char> brackets;
             size_t opening_index;
-
+            
             for (size_t i = 0; i < defenition_string.size(); ++i) {
                 if (brackets.empty() && closing_brackets.find(defenition_string[i]) != -1)
                     throw std::runtime_error("Function non_basic_variable : unknown type found!");
@@ -179,11 +179,13 @@ namespace parse {
                 if (closing_brackets.find(defenition_string[i]) != -1) {
                     if (pairs[brackets.back()] != defenition_string[i])
                         throw std::runtime_error("Function non_basic_variable : unknown type found!");
+
                     brackets.pop_back();
-                    non_basic_variable(defenition_string.substr(opening_index + 1, i - opening_index - 1));
+                    children.emplace_back(new non_basic_variable(defenition_string.substr(opening_index + 1, i - opening_index - 1), depth + 1));
                     opening_index = i + 1;
                 }
             }
+            std::cout << depth << '\n';
         }
 
         non_basic_variable(int _index, const basic_variable& _value) : index(_index), value(_value) {}
