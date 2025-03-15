@@ -107,6 +107,8 @@ namespace parse {
         return out;
     }
 
+    enum types { INT, DOUBLE, STRING, UNKNOWN };
+
     struct basic_variable {
         [[nodiscard]] inline static char tolower(const char c) { return (c > 'A' && c < 'Z') ? static_cast<char> (c - 'a' + 'A') : c; }
 
@@ -119,6 +121,8 @@ namespace parse {
             std::cout << ' ';
         }
 
+        inline void save_to_history(std::string &v) { changes.emplace_back(v); }
+
         basic_variable() = default;
 
         explicit basic_variable (const std::string &value_from_code) { start_value = mega_cast(value_from_code); }
@@ -127,7 +131,6 @@ namespace parse {
     private:
         std::variant<int, double, std::string> start_value;
         std::vector<std::string> changes;
-        enum types { INT, DOUBLE, STRING, UNKNOWN };
 
     protected:
         [[nodiscard]] static short get_type(const std::string &s) {
@@ -152,10 +155,44 @@ namespace parse {
                 default: return s;
             }
         }
+    };
 
-        void save_to_history(std::variant<int, double, std::string> ) {
+    struct non_basic_variable {
+        non_basic_variable() = default;
 
+        explicit non_basic_variable(const std::string &defenition_string, int depth = 0) {
+            std::string opening_brackets = "([";
+            std::string closing_brackets = ")]";
+            std::map<char, char> pairs = {{'(', ')'}, {'[', ']'}};
+            std::vector<char> brackets;
+            size_t opening_index;
+
+            for (size_t i = 0; i < defenition_string.size(); ++i) {
+                if (brackets.empty() && closing_brackets.find(defenition_string[i]) != -1)
+                    throw std::runtime_error("Function non_basic_variable : unknown type found!");
+
+                if (opening_brackets.find(defenition_string[i]) != -1) {
+                    brackets.push_back(defenition_string[i]);
+                    opening_index = i;
+                }
+
+                if (closing_brackets.find(defenition_string[i]) != -1) {
+                    if (pairs[brackets.back()] != defenition_string[i])
+                        throw std::runtime_error("Function non_basic_variable : unknown type found!");
+                    brackets.pop_back();
+                    non_basic_variable(defenition_string.substr(opening_index + 1, i - opening_index - 1));
+                    opening_index = i + 1;
+                }
+            }
         }
+
+        non_basic_variable(int _index, const basic_variable& _value) : index(_index), value(_value) {}
+
+        ~non_basic_variable() = default;
+    private:
+        std::vector<non_basic_variable *> children;
+        basic_variable value;
+        int index;
     };
 
     struct node_t {

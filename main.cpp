@@ -18,8 +18,9 @@ int main(int argc, char *argv[]) {
         }
     }
     const std::string path = argv[1];
-    parse::parser p(parse::read_file(path), false);
-    p.parse();
-    p.tree();
+//    parse::parser p(parse::read_file(path), false);
+//    p.parse();
+//    p.tree();
+    parse::non_basic_variable test("[[1, 2], 3]");
     return 0;
 }
