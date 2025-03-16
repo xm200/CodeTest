@@ -8,7 +8,7 @@
 
 *Windows*
 
-    .\CodeTest [options] path
+    .\CodeTest.exe [options] path
 
 **Main options**:
 
