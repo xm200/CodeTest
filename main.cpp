@@ -21,7 +21,6 @@ int main(int argc, char *argv[]) {
 //    parse::parser p(parse::read_file(path), false);
 //    p.parse();
 //    p.tree();
-    parse::non_basic_variable test("[[1, 2], 3]");
-//    std::stoi(" 3");
+    parse::non_basic_variable test("[[1, 2] 3]");
     return 0;
 }

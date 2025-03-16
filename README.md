@@ -1,8 +1,17 @@
-CodeTest is used for Code Testing
+*CodeTest* is used for *Code Testing*
 
-Usage:
-./codetest [options] path
+**Usage**:
 
-Credits:
-xm200
-Fedorracora
+*Linux/Macos*
+
+    ./CodeTest [options] path
+
+*Windows*
+
+    .\CodeTest [options] path
+
+**Main options**:
+
+    --help, to see this help
+    -dfs / -bfs, use dfs / bfs algo for contol flow graph parsing
+
