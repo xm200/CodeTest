@@ -18,12 +18,14 @@ int main(int argc, char *argv[]) {
         }
     }
     const std::string path = argv[1];
-//    parse::parser p(parse::read_file(path), false);
-//    p.parse();
-//    p.tree();
+    parse::parser p(parse::read_file(path), false);
+    p.parse();
+    p.tree();
 //    parse::non_basic_variable test("[[1, 2] 3]");
     variable a("ab");
     variable b("oba");
-    (a + (&b)).get_val();
+    (a + b).get_val();
+    BinaryOperation c(&a, &b, '+');
+    c.get_value();
     return 0;
 }

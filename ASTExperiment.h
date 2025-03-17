@@ -11,22 +11,16 @@
 #include <utility>
 #include <iostream>
 
-void get_v(const int &other) { std::cout << other; }
-void get_v(const double &other) { std::cout << other; }
-void get_v(const std::string &other) { std::cout << other; }
+[[maybe_unused]] void get_v(const int &other) { std::cout << other << '\n'; }
+[[maybe_unused]] void get_v(const double &other) { std::cout << other << '\n'; }
+[[maybe_unused]] void get_v(const std::string &other) { std::cout << other << '\n'; }
 
-struct AstNode {
-    AstNode() = default;
-    ~AstNode() = default;
-    virtual std::variant<int, double, std::string> get_value() const = 0;
-};
+struct variable {
 
-
-struct variable final : AstNode {
 protected:
     std::variant<int, double, std::string> value;
 
-    [[nodiscard]] std::variant<int, double, std::string> get_value() const override {
+    [[nodiscard]] std::variant<int, double, std::string> get_value() const  {
         auto *pint = std::get_if<int>(&value);
         if (pint != nullptr) return *pint;
 
@@ -54,8 +48,15 @@ protected:
 
 public:
 
-    explicit variable(std::variant<int, double, std::string> *val) { this->value = *val; }
-    explicit variable(std::variant<int, double, std::string> val) { this->value = std::move(val); }
+    variable() = default;
+    ~variable() = default;
+
+    [[maybe_unused]] explicit variable(std::variant<int, double, std::string> *val) { this->value = *val; }
+    [[maybe_unused]] explicit variable(std::variant<int, double, std::string> &val) { this->value = val; }
+    [[maybe_unused]] explicit variable(std::variant<int, double, std::string> val) { this->value = std::move(val); }
+
+    [[maybe_unused]] variable(const variable &val) { this->value = val.value; }
+    [[maybe_unused]] explicit variable(variable *val) { this->value = std::move(val->value); }
 
     inline void get_val() { std::visit([] (auto&& arg) { return get_v(arg); }, this->value); }
 
@@ -89,26 +90,26 @@ public:
 
     inline bool operator>=(const variable *var) const { return this->operator>(var) || this->operator==(var); }
 
-    variable operator+(variable *other) {
-        if (this->get_type() != other->get_type())
+    variable operator+(variable other) {
+        if (this->get_type() != other.get_type())
             throw std::runtime_error("Function operator+ : different types not allowed!");
 
         auto *pint1 = std::get_if<int>(&value);
-        auto *pint2 = std::get_if<int>(&other->value);
+        auto *pint2 = std::get_if<int>(&other.value);
         if (pint1 != nullptr && pint2 != nullptr) {
             this->value = *pint1 + *pint2;
             return *this;
         }
 
         auto *pdouble1 = std::get_if<double>(&value);
-        auto *pdouble2 = std::get_if<double>(&other->value);
+        auto *pdouble2 = std::get_if<double>(&other.value);
         if (pdouble1 != nullptr && pdouble2 != nullptr) {
             this->value = *pdouble1 + *pdouble2;
             return *this;
         }
 
         auto *pstring1 = std::get_if<std::string>(&value);
-        auto *pstring2 = std::get_if<std::string>(&other->value);
+        auto *pstring2 = std::get_if<std::string>(&other.value);
         if (pstring2 != nullptr && pstring2 != nullptr) {
             this->value = std::string(*pstring1 + *pstring2);
             return *this;
@@ -116,18 +117,23 @@ public:
 
         throw std::runtime_error("Class: variable, function: get_value, error: no value is saved while getting it!");
     }
-
 };
 
-struct BinaryOperation : AstNode {
-    variable *left, *right;
+struct BinaryOperation {
+    variable left, right;
     char operation;
 
-    BinaryOperation(variable *left, variable *right, char operation)
-        : left(left), right(right), operation(operation) {}
+    [[maybe_unused]] BinaryOperation(variable *left, variable *right, char operation)
+        : left(*left), right(*right), operation(operation) {}
 
-    std::variant<int, double, std::string> get_value() const override {
+    [[maybe_unused]] BinaryOperation(std::variant<int, double, std::string> *left, std::variant<int, double, std::string> *right, char operation)
+            : left(left), right(right), operation(operation) {}
+
+    void get_value() {
         switch (operation) {
+            case '+':
+                (left + right).get_val();
+                break;
             default:
                 break; ///todo : add types operators: +, -, +=, -=, *, /, *=, /=
         }
