@@ -13,8 +13,9 @@
 #include <map>
 #include <any>
 #include <queue>
-#include <functional>
 #include <iostream>
+#include <variant>
+#include "interval.h"
 
 namespace custom {
     template<typename T>
@@ -58,32 +59,27 @@ namespace custom {
     }
 
     struct custom_type {
-        std::any data;
+        using inner_type = std::variant<typeInt, typeFloat, char, std::vector<custom_type*>>;
+        enum types {
+            INT, FLOAT, CHAR, VECTOR
+        };
+        short type;
+        inner_type data;
         std::string name = "undefined name";
-        std::function<bool(const custom_type &, const custom_type &)> less =
-            [this](const custom_type &, const custom_type &)->bool{
-                throw std::logic_error("operator < is not defined for type " + name);
-        };
-        std::function<bool(const custom_type &, const custom_type &)> more =
-            [this](const custom_type &, const custom_type &)->bool{
-                throw std::logic_error("operator > is not defined for type " + name);
-        };
-        std::function<bool(const custom_type &, const custom_type &)> less_equal =
-            [this](const custom_type &, const custom_type &)->bool{
-                throw std::logic_error("operator <= is not defined for type " + name);
-        };
-        std::function<bool(const custom_type &, const custom_type &)> more_equal =
-            [this](const custom_type &, const custom_type &)->bool{
-                throw std::logic_error("operator >= is not defined for type " + name);
-        };
-        std::function<bool(const custom_type &, const custom_type &)> equal =
-            [this](const custom_type &, const custom_type &)->bool{
-                throw std::logic_error("operator == is not defined for type " + name);
-        };
-        std::function<bool(const custom_type &, const custom_type &)> not_equal =
-            [this](const custom_type &, const custom_type &)->bool{
-                throw std::logic_error("operator != is not defined for type " + name);
-        };
+        [[nodiscard]] inner_type operator<(const inner_type &a) {
+
+            return {};
+        }
+    protected:
+        template<typename type>
+        inline bool can_cast() const {return std::get_if<type>(&data) != nullptr;}
+        short get_type() const {
+            if (can_cast<typeInt>()) return types::INT;
+            if (can_cast<typeFloat>()) return types::FLOAT;
+            if (can_cast<char>()) return types::CHAR;
+            if (can_cast<std::vector<custom_type*>>()) return types::VECTOR;
+
+        }
     };
 
 }
