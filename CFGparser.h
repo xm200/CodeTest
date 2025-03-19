@@ -50,36 +50,71 @@ namespace custom {
     };
 
     template<typename T>
-    vec_line<T> vl_substr(const std::vector<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+    [[maybe_unused]] vec_line<T> vl_substr(const std::vector<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
         return {&vec, pos, std::min(len, vec.size() - pos)};
     }
     template<typename T>
-    vec_line<T> vl_substr(const vec_line<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+    [[maybe_unused]] vec_line<T> vl_substr(const vec_line<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
         return {vec.vec, pos + vec.l, std::min(len, vec.size() - pos - vec.l)};
     }
 
     struct custom_type {
-        using inner_type = std::variant<typeInt, typeFloat, char, std::vector<custom_type*>>;
+        using inner_type = std::variant<interval::interval<typeInt>, interval::interval<typeFloat>, \
+                interval::interval<std::string>, std::vector<custom_type*>>;
+
         enum types {
-            INT, FLOAT, CHAR, VECTOR
+            INT, FLOAT, STRING, VECTOR, UNKNOWN
         };
-        short type;
+
+        short type = UNKNOWN;
         inner_type data;
         std::string name = "undefined name";
-        [[nodiscard]] inner_type operator<(const inner_type &a) {
 
+        custom_type() = default;
+        explicit custom_type(const inner_type& d) : data(d), type(get_type(d)) {}
+
+        ~custom_type() = default;
+
+        [[nodiscard]] inner_type operator<(custom_type &a) {
+            if (type != a.type)
+                throw std::logic_error("Function operator<(), error: could not compare different types!");
+
+            ///todo: add interval returning
+            if (check<interval::interval<typeInt>>(data, a.data)) {
+                return {};
+            }
+
+            if (check<interval::interval<typeFloat>>(data, a.data)) {
+                return {};
+            }
+
+            if (check<interval::interval<std::string>>(data, a.data)) {
+                return {};
+            }
             return {};
         }
-    protected:
-        template<typename type>
-        inline bool can_cast() const {return std::get_if<type>(&data) != nullptr;}
-        short get_type() const {
-            if (can_cast<typeInt>()) return types::INT;
-            if (can_cast<typeFloat>()) return types::FLOAT;
-            if (can_cast<char>()) return types::CHAR;
-            if (can_cast<std::vector<custom_type*>>()) return types::VECTOR;
 
+    protected:
+
+        template<typename type>
+        [[nodiscard]] static inline bool can_cast(const inner_type &d) {
+            return std::get_if<type>(&d) != nullptr;
         }
+
+        template<typename type>
+        [[nodiscard]] static bool check(inner_type &current, inner_type &other) {
+            return (can_cast<type>(current) || can_cast<type>(other));
+        }
+
+        [[nodiscard]] static short get_type(const inner_type &d) {
+            if (can_cast<interval::interval<typeInt>>(d)) return types::INT;
+            if (can_cast<interval::interval<typeFloat>>(d)) return types::FLOAT;
+            if (can_cast<interval::interval<std::string>>(d)) return types::STRING;
+            if (can_cast<std::vector<custom_type*>>(d)) return types::VECTOR;
+            throw std::runtime_error("Function: can_cast(), error: UNKNOWN TYPE");
+        }
+
+
     };
 
 }
