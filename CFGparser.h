@@ -74,23 +74,148 @@ namespace custom {
 
         ~custom_type() = default;
 
-        [[nodiscard]] inner_type operator<(custom_type &a) {
-            if (type != a.type)
-                throw std::logic_error("Function operator<(), error: could not compare different types!");
+        template<typename type>
+        [[nodiscard]] inner_type operator<(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator <, error: could not compare different types!");
+            interval::interval<type> buf;
+            buf.add_interval(interval::minimal<type>(),
+                             std::get<interval::interval<type>>(a.data).any().value());
+            return buf * std::get<interval::interval<type>>(data);
+        }
 
-            ///todo: add interval returning
-            if (check<interval::interval<typeInt>>(data, a.data)) {
-                return {};
-            }
+        template<typename type>
+        [[nodiscard]] inner_type operator>(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator >, error: could not compare different types!");
+            interval::interval<type> buf;
+            buf.add_interval(std::get<interval::interval<type>>(a.data).any().value(),
+                             interval::maximal<type>());
+            return buf * std::get<interval::interval<type>>(data);
+        }
 
-            if (check<interval::interval<typeFloat>>(data, a.data)) {
-                return {};
-            }
+        template<typename type>
+        [[nodiscard]] inner_type operator<=(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator <=, error: could not compare different types!");
+            interval::interval<type> buf;
+            buf.add_interval(interval::minimal<type>(),
+                             std::get<interval::interval<type>>(a.data).any().value());
+            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
+            return buf * std::get<interval::interval<type>>(data);
+        }
 
-            if (check<interval::interval<std::string>>(data, a.data)) {
-                return {};
-            }
-            return {};
+        template<typename type>
+        [[nodiscard]] inner_type operator>=(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator >=, error: could not compare different types!");
+            interval::interval<type> buf;
+            buf.add_interval(std::get<interval::interval<type>>(a.data).any().value(),
+                             interval::maximal<type>());
+            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
+            return buf * std::get<interval::interval<type>>(data);
+        }
+
+        template<typename type>
+        [[nodiscard]] inner_type operator==(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator ==, error: could not compare different types");
+            interval::interval<type> buf;
+            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
+            return buf * std::get<interval::interval<type>>(data);
+        }
+
+        template<typename type>
+        [[nodiscard]] inner_type operator!=(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator ==, error: could not compare different types");
+            interval::interval<type> buf;
+            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
+            return std::get<interval::interval<type>>(data) - buf;
+        }
+
+        template<typename type>
+        [[nodiscard]] inner_type operator+(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator +, error: could not add different types");
+            return std::get<interval::interval<type>>(data)
+                   + std::get<interval::interval<type>>(a.data).any().value();
+        }
+
+        template<typename type>
+        [[nodiscard]] inner_type operator-(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator -, error: could not subtract different types");
+            return std::get<interval::interval<type>>(data)
+                   - std::get<interval::interval<type>>(a.data).any().value();
+        }
+
+        template<typename type>
+        [[nodiscard]] inner_type operator*(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator *, error: could not multiply different types");
+            return std::get<interval::interval<type>>(data)
+                   * std::get<interval::interval<type>>(a.data).any().value();
+        }
+
+        template<typename type>
+        [[nodiscard]] inner_type operator/(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator /, error: could not divide different types");
+            return std::get<interval::interval<type>>(data)
+                   / std::get<interval::interval<type>>(a.data).any().value();
+        }
+
+        template<typename type>
+        [[nodiscard]] inner_type operator%(const custom_type &a) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator %, error: could not get % of different types");
+            return std::get<interval::interval<type>>(data)
+                   % std::get<interval::interval<type>>(a.data).any().value();
+        }
+
+//        template<typename type>
+        custom_type& operator=(const inner_type &a) {
+            data = a;
+            type = get_type(a);
+            return *this;
+        }
+
+        custom_type& operator=(const custom_type &a) = default;
+
+        template<typename type>
+        void operator+=(const custom_type &a) {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator +=, error: could not add of different types");
+            data = this->operator+<type>(a);
+        }
+
+        template<typename type>
+        void operator-=(const custom_type &a) {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator -=, error: could not subtract of different types");
+            data = this->operator-<type>(a);
+        }
+
+        template<typename type>
+        void operator*=(const custom_type &a) {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator +=, error: could not multiply of different types");
+            data = this->operator*<type>(a);
+        }
+
+        template<typename type>
+        void operator/=(const custom_type &a) {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator +=, error: could not divide of different types");
+            data = this->operator/<type>(a);
+        }
+
+        template<typename type>
+        void operator%=(const custom_type &a) {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator +=, error: could not get % of different types");
+            data = this->operator%<type>(a);
         }
 
     protected:
@@ -100,11 +225,6 @@ namespace custom {
             return std::get_if<type>(&d) != nullptr;
         }
 
-        template<typename type>
-        [[nodiscard]] static bool check(inner_type &current, inner_type &other) {
-            return (can_cast<type>(current) || can_cast<type>(other));
-        }
-
         [[nodiscard]] static short get_type(const inner_type &d) {
             if (can_cast<interval::interval<typeInt>>(d)) return types::INT;
             if (can_cast<interval::interval<typeFloat>>(d)) return types::FLOAT;
@@ -112,10 +232,7 @@ namespace custom {
             if (can_cast<std::vector<custom_type*>>(d)) return types::VECTOR;
             throw std::runtime_error("Function: can_cast(), error: UNKNOWN TYPE");
         }
-
-
     };
-
 }
 
 
@@ -133,23 +250,23 @@ namespace parse {
     };
 
     constexpr short get_os() {
-        #if defined(__linux__)
-            return LINUX;
-        #elif defined(_WIN32) || defined(_WIN64)
-            return WIN;
-        #elif defined(__APPLE__) || defined(__MACH__)
-            return MACOS;
-        #endif
+#if defined(__linux__)
+        return LINUX;
+#elif defined(_WIN32) || defined(_WIN64)
+        return WIN;
+#elif defined(__APPLE__) || defined(__MACH__)
+        return MACOS;
+#endif
     }
 
     struct cache_t {
         void init(const std::string &way) {
-            #if defined(DEBUG_MODE)
-                if (inited) {
-                    if (way + '/' == path || way == path || way + '\\' == path) return;
-                    throw std::logic_error("cache with multiple initialization and different paths");
-                }
-            #endif
+#if defined(DEBUG_MODE)
+            if (inited) {
+                if (way + '/' == path || way == path || way + '\\' == path) return;
+                throw std::logic_error("cache with multiple initialization and different paths");
+            }
+#endif
 
             if (way.empty()) path = way;
             else if constexpr (get_os() == LINUX || get_os() == MACOS) path = way + '/';
@@ -163,16 +280,16 @@ namespace parse {
 
         ~cache_t() {
             if (!inited) return;
-            #if !defined(DO_NOT_REMOVE_CACHE)
-                if constexpr (get_os() == LINUX || get_os() == MACOS) system(("rm -rf " + path).c_str());
-                else system(("rd /s /q " + path).c_str()); // Remove dir
-            #endif
+#if !defined(DO_NOT_REMOVE_CACHE)
+            if constexpr (get_os() == LINUX || get_os() == MACOS) system(("rm -rf " + path).c_str());
+            else system(("rd /s /q " + path).c_str()); // Remove dir
+#endif
         }
 
         const std::string &operator()() const {
-            #if defined(DEBUG_MODE)
-                if (!inited) throw std::logic_error("cache dir does not exists");
-            #endif
+#if defined(DEBUG_MODE)
+            if (!inited) throw std::logic_error("cache dir does not exists");
+#endif
             return path;
         }
 
@@ -201,12 +318,12 @@ namespace parse {
         while (std::getline(file, buf)) out->push_back(buf);
         file.close();
 
-        #if defined(VERBOSE)
-            std::cout << "path to cache: " << cache() << '\n';
-            std::cout << "file name: " << file_name << '\n';
-            std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
-            std::cout << "code have " << out->size() << " lines\n";
-        #endif
+#if defined(VERBOSE)
+        std::cout << "path to cache: " << cache() << '\n';
+        std::cout << "file name: " << file_name << '\n';
+        std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
+        std::cout << "code have " << out->size() << " lines\n";
+#endif
 
         return out;
     }
@@ -270,7 +387,7 @@ namespace parse {
             std::map<char, char> pairs = {{'(', ')'}, {'[', ']'}};
             std::vector<char> brackets;
             size_t opening_index;
-            
+
             for (size_t i = 0; i < defenition_string.size(); ++i) {
                 if (brackets.empty() && closing_brackets.find(defenition_string[i]) != -1)
                     throw std::runtime_error("Function non_basic_variable : unknown type found!");
@@ -383,10 +500,10 @@ namespace parse {
         }
 
         [[ nodiscard ]] size_t get_code_block(const size_t l = 0) const {
-        #if defined(DEBUG_MODE)
-                if (l >= code->size()) throw
+#if defined(DEBUG_MODE)
+            if (l >= code->size()) throw
                         std::length_error("Unreachable start limit in function get_code_block()");
-        #endif
+#endif
 
             const size_t block_spaces = get_spaces(code->operator[](l));
             for (size_t i = l; i < code->size(); ++i) if (get_spaces(code->operator[](i)) < block_spaces) return i - l;
@@ -394,12 +511,12 @@ namespace parse {
         }
 
         void parse(node_t *node, const size_t depth = 0) {
-            #if defined(DEBUG_MODE)
-                if (node->l >= code->size()) throw
-                            std::length_error("Unreachable start limit in function parse()");
-                if (node->l + node->len > code->size()) throw
-                            std::length_error("Unreachable end limit in function parse()");
-            #endif
+#if defined(DEBUG_MODE)
+            if (node->l >= code->size()) throw
+                        std::length_error("Unreachable start limit in function parse()");
+            if (node->l + node->len > code->size()) throw
+                        std::length_error("Unreachable end limit in function parse()");
+#endif
 
             for (auto i = node->l; i < node->l + node->len; ++i) {
                 std::string first_word;

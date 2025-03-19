@@ -4,14 +4,15 @@
 
 *Linux/Macos*
 
-    ./CodeTest [options] path
+    ./CodeTest [attributes] path_to_file
 
 *Windows*
 
-    .\CodeTest.exe [options] path
+    .\CodeTest.exe [attributes] path_to_file
 
-**Main options**:
+**Main attributes**:
 
     --help, to see this help
-    -dfs / -bfs, use dfs / bfs algo for contol flow graph parsing
+    -B / --bfs: use BFS (default using DFS algo)
+    -D / --dfs: use DFS
 

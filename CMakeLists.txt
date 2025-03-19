@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_compile_definitions(VERBOSE)
 add_compile_definitions(DEBUG_MODE)
+add_compile_definitions(typeInt=long\ long)
+add_compile_definitions(typeFloat=long\ double)
 #add_compile_definitions(DO_NOT_REMOVE_CACHE)
 
 add_executable(CodeTest main.cpp interval.h)
