@@ -16,6 +16,110 @@
 #include <variant>
 #include <iostream>
 
+namespace custom {
+    template<typename T>
+    struct vec_line {
+        const std::vector<T> *vec = nullptr;
+        std::size_t l = 0, len = 0;
+
+        [[nodiscard]] std::size_t size() const { return len; }
+
+        [[nodiscard]] typename std::vector<T>::iterator begin() _GLIBCXX_NOEXCEPT
+        { return vec->begin() + l; }
+        [[nodiscard]] typename std::vector<T>::const_iterator begin() const _GLIBCXX_NOEXCEPT
+        {return vec->cbegin() + l; }
+
+        [[nodiscard]] typename std::vector<T>::iterator end() _GLIBCXX_NOEXCEPT
+        { return vec->begin() + l + len; }
+        [[nodiscard]] typename std::vector<T>::const_iterator end() const _GLIBCXX_NOEXCEPT
+        {return vec->cbegin() + l + len; }
+
+        [[nodiscard]] T& operator[](std::size_t i) _GLIBCXX_NOEXCEPT {
+#if defined(DEBUG_MODE)
+            if (i >= len) throw std::out_of_range("index out of range");
+#endif
+            return vec->operator[](i) + l;
+        }
+        [[nodiscard]] T& operator[](std::size_t i) const _GLIBCXX_NOEXCEPT {
+#if defined(DEBUG_MODE)
+            if (i >= len) throw std::out_of_range("index out of range");
+#endif
+            return vec->operator[](i) + l;
+        }
+    };
+
+    template<typename T>
+    [[maybe_unused]] vec_line<T> vl_substr(const std::vector<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+        return {&vec, pos, std::min(len, vec.size() - pos)};
+    }
+    template<typename T>
+    [[maybe_unused]] vec_line<T> vl_substr(const vec_line<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+        return {vec.vec, pos + vec.l, std::min(len, vec.size() - pos - vec.l)};
+    }
+
+    struct custom_type {
+        using inner_type = std::variant<interval::interval<typeInt>, interval::interval<typeFloat>, \
+                interval::interval<std::string>, std::vector<custom_type*>>;
+
+        enum types {
+            INT, FLOAT, STRING, VECTOR, UNKNOWN
+        };
+
+        short type = UNKNOWN;
+        inner_type data;
+        std::string name = "undefined name";
+
+        custom_type() = default;
+        explicit custom_type(const inner_type& d) : data(d), type(get_type(d)) {}
+
+        ~custom_type() = default;
+
+        [[nodiscard]] inner_type operator<(custom_type &a) {
+            if (type != a.type)
+                throw std::logic_error("Function operator<(), error: could not compare different types!");
+
+            ///todo: add interval returning
+            if (check<interval::interval<typeInt>>(data, a.data)) {
+                return {};
+            }
+
+            if (check<interval::interval<typeFloat>>(data, a.data)) {
+                return {};
+            }
+
+            if (check<interval::interval<std::string>>(data, a.data)) {
+                return {};
+            }
+            return {};
+        }
+
+    protected:
+
+        template<typename type>
+        [[nodiscard]] static inline bool can_cast(const inner_type &d) {
+            return std::get_if<type>(&d) != nullptr;
+        }
+
+        template<typename type>
+        [[nodiscard]] static bool check(inner_type &current, inner_type &other) {
+            return (can_cast<type>(current) || can_cast<type>(other));
+        }
+
+        [[nodiscard]] static short get_type(const inner_type &d) {
+            if (can_cast<interval::interval<typeInt>>(d)) return types::INT;
+            if (can_cast<interval::interval<typeFloat>>(d)) return types::FLOAT;
+            if (can_cast<interval::interval<std::string>>(d)) return types::STRING;
+            if (can_cast<std::vector<custom_type*>>(d)) return types::VECTOR;
+            throw std::runtime_error("Function: can_cast(), error: UNKNOWN TYPE");
+        }
+
+
+    };
+
+}
+
+
+
 namespace parse {
 
     inline std::string file_name, file_type;
