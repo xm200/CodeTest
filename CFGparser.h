@@ -14,6 +14,7 @@
 #include <any>
 #include <queue>
 #include <variant>
+#include <functional>
 #include <iostream>
 
 namespace custom {
@@ -74,107 +75,101 @@ namespace custom {
 
         ~custom_type() = default;
 
-        template<typename type>
-        [[nodiscard]] inner_type operator<(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator <, error: could not compare different types!");
-            interval::interval<type> buf;
-            buf.add_interval(interval::minimal<type>(),
-                             std::get<interval::interval<type>>(a.data).any().value());
-            return buf * std::get<interval::interval<type>>(data);
+#define subst(fun, a) \
+    switch (type) { \
+        case INT: return fun<typeInt>(a); \
+        case FLOAT: return fun<typeFloat>(a); \
+        case STRING: return fun<std::string>(a); \
+        default: throw std::runtime_error("unknown type"); \
+    }
+        [[nodiscard]] inner_type operator<(const custom_type &a) const {subst(less, a)}
+        [[nodiscard]] inner_type operator>(const custom_type &a) const {subst(more, a)}
+        [[nodiscard]] inner_type operator<=(const custom_type &a) const {subst(less_equal, a)}
+        [[nodiscard]] inner_type operator>=(const custom_type &a) const {subst(more_equal, a)}
+        [[nodiscard]] inner_type operator==(const custom_type &a) const {subst(equal, a)}
+        [[nodiscard]] inner_type operator!=(const custom_type &a) const {subst(not_equal, a)}
+
+        template<typename T>
+        [[nodiscard]] inner_type less(const custom_type &a) const {
+            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
+                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.data).any().value());
+            }, a, "<");
         }
 
-        template<typename type>
-        [[nodiscard]] inner_type operator>(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator >, error: could not compare different types!");
-            interval::interval<type> buf;
-            buf.add_interval(std::get<interval::interval<type>>(a.data).any().value(),
-                             interval::maximal<type>());
-            return buf * std::get<interval::interval<type>>(data);
+        template<typename T>
+        [[nodiscard]] inner_type more(const custom_type &a) const {
+            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
+                buf.add_interval(std::get<interval::interval<T>>(a.data).any().value(),interval::maximal<T>());
+            }, a, ">");
         }
 
-        template<typename type>
-        [[nodiscard]] inner_type operator<=(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator <=, error: could not compare different types!");
-            interval::interval<type> buf;
-            buf.add_interval(interval::minimal<type>(),
-                             std::get<interval::interval<type>>(a.data).any().value());
-            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
-            return buf * std::get<interval::interval<type>>(data);
+        template<typename T>
+        [[nodiscard]] inner_type less_equal(const custom_type &a) const {
+            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
+                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.data).any().value());
+                buf.add_point(std::get<interval::interval<T>>(a.data).any().value());
+            }, a, "<=");
         }
 
-        template<typename type>
-        [[nodiscard]] inner_type operator>=(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator >=, error: could not compare different types!");
-            interval::interval<type> buf;
-            buf.add_interval(std::get<interval::interval<type>>(a.data).any().value(),
-                             interval::maximal<type>());
-            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
-            return buf * std::get<interval::interval<type>>(data);
+        template<typename T>
+        [[nodiscard]] inner_type more_equal(const custom_type &a) const {
+            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
+                buf.add_interval(std::get<interval::interval<T>>(a.data).any().value(), interval::maximal<T>());
+                buf.add_point(std::get<interval::interval<T>>(a.data).any().value());
+            }, a, ">=");
         }
 
-        template<typename type>
-        [[nodiscard]] inner_type operator==(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator ==, error: could not compare different types");
-            interval::interval<type> buf;
-            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
-            return buf * std::get<interval::interval<type>>(data);
+        template<typename T>
+        [[nodiscard]] inner_type equal(const custom_type &a) const {
+            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
+                buf.add_point(std::get<interval::interval<T>>(a.data).any().value());
+            }, a, "==");
         }
 
-        template<typename type>
-        [[nodiscard]] inner_type operator!=(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator ==, error: could not compare different types");
-            interval::interval<type> buf;
-            buf.add_point(std::get<interval::interval<type>>(a.data).any().value());
-            return std::get<interval::interval<type>>(data) - buf;
+        template<typename T>
+        [[nodiscard]] inner_type not_equal(const custom_type &a) const {
+            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
+                buf.add_interval(std::get<interval::interval<T>>(a.data).any().value(), interval::maximal<T>());
+                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.data).any().value());
+            }, a, "!=");
         }
 
         template<typename type>
         [[nodiscard]] inner_type operator+(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator +, error: could not add different types");
+            checkType(a, "+");
             return std::get<interval::interval<type>>(data)
                    + std::get<interval::interval<type>>(a.data).any().value();
         }
 
         template<typename type>
         [[nodiscard]] inner_type operator-(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator -, error: could not subtract different types");
+            checkType(a, "-");
             return std::get<interval::interval<type>>(data)
                    - std::get<interval::interval<type>>(a.data).any().value();
         }
 
         template<typename type>
         [[nodiscard]] inner_type operator*(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator *, error: could not multiply different types");
+            checkType(a, "*");
             return std::get<interval::interval<type>>(data)
                    * std::get<interval::interval<type>>(a.data).any().value();
         }
 
         template<typename type>
         [[nodiscard]] inner_type operator/(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator /, error: could not divide different types");
+            checkType(a, "/");
             return std::get<interval::interval<type>>(data)
                    / std::get<interval::interval<type>>(a.data).any().value();
         }
 
         template<typename type>
         [[nodiscard]] inner_type operator%(const custom_type &a) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator %, error: could not get % of different types");
+            checkType(a, "%");
             return std::get<interval::interval<type>>(data)
                    % std::get<interval::interval<type>>(a.data).any().value();
         }
 
-//        template<typename type>
+
         custom_type& operator=(const inner_type &a) {
             data = a;
             type = get_type(a);
@@ -217,8 +212,25 @@ namespace custom {
                 throw std::logic_error("Function operator +=, error: could not get % of different types");
             data = this->operator%<type>(a);
         }
+#undef subst
 
     protected:
+
+        template<typename T>
+        [[nodiscard]] inner_type less_in(
+                     const std::function<void(interval::interval<T> &it, const custom_type &a)> &it,
+                     const custom_type &a,
+                     const std::string &n) const {
+            checkType(a, n);
+            interval::interval<T> buf;
+            it(buf, a);
+            return buf * std::get<interval::interval<T>>(data);
+        }
+
+        void checkType(const custom_type &a, const std::string &name_op) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator " + name_op + ", error: could not compare different types!");
+        }
 
         template<typename type>
         [[nodiscard]] static inline bool can_cast(const inner_type &d) {
