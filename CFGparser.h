@@ -82,12 +82,24 @@ namespace custom {
         case STRING: return fun<std::string>(a); \
         default: throw std::runtime_error("unknown type"); \
     }
+#define subst_digit_only(fun, a)  \
+    switch (type) { \
+        case INT: return fun<typeInt>(a); \
+        case FLOAT: return fun<typeFloat>(a); \
+        default: throw std::runtime_error("unknown type"); \
+    }
+
         [[nodiscard]] inner_type operator<(const custom_type &a) const {subst(less, a)}
         [[nodiscard]] inner_type operator>(const custom_type &a) const {subst(more, a)}
         [[nodiscard]] inner_type operator<=(const custom_type &a) const {subst(less_equal, a)}
         [[nodiscard]] inner_type operator>=(const custom_type &a) const {subst(more_equal, a)}
         [[nodiscard]] inner_type operator==(const custom_type &a) const {subst(equal, a)}
         [[nodiscard]] inner_type operator!=(const custom_type &a) const {subst(not_equal, a)}
+        [[nodiscard]] inner_type operator+(const custom_type &a) const { subst_digit_only(add, a) }
+        [[nodiscard]] inner_type operator-(const custom_type &a) const { subst_digit_only(subtract, a) }
+        [[nodiscard]] inner_type operator*(const custom_type &a) const { subst_digit_only(multiply, a) }
+        [[nodiscard]] inner_type operator/(const custom_type &a) const { subst_digit_only(divide, a) }
+        [[nodiscard]] inner_type operator%(const custom_type &a) const { subst_digit_only(mod, a) }
 
         template<typename T>
         [[nodiscard]] inner_type less(const custom_type &a) const {
@@ -134,39 +146,41 @@ namespace custom {
             }, a, "!=");
         }
 
-        template<typename type>
-        [[nodiscard]] inner_type operator+(const custom_type &a) const {
+        template<typename T>
+        [[nodiscard]] inner_type add(const custom_type &a) const {
             checkType(a, "+");
-            return std::get<interval::interval<type>>(data)
-                   + std::get<interval::interval<type>>(a.data).any().value();
+            return std::get<interval::interval<T>>(data)
+                   + std::get<interval::interval<T>>(a.data).any().value();
         }
 
+
+
         template<typename type>
-        [[nodiscard]] inner_type operator-(const custom_type &a) const {
+        [[nodiscard]] inner_type subtract(const custom_type &a) const {
             checkType(a, "-");
             return std::get<interval::interval<type>>(data)
                    - std::get<interval::interval<type>>(a.data).any().value();
         }
 
         template<typename type>
-        [[nodiscard]] inner_type operator*(const custom_type &a) const {
+        [[nodiscard]] inner_type multiply(const custom_type &a) const {
             checkType(a, "*");
             return std::get<interval::interval<type>>(data)
                    * std::get<interval::interval<type>>(a.data).any().value();
         }
 
         template<typename type>
-        [[nodiscard]] inner_type operator/(const custom_type &a) const {
+        [[nodiscard]] inner_type divide(const custom_type &a) const {
             checkType(a, "/");
             return std::get<interval::interval<type>>(data)
                    / std::get<interval::interval<type>>(a.data).any().value();
         }
 
-        template<typename type>
-        [[nodiscard]] inner_type operator%(const custom_type &a) const {
+        [[nodiscard]] inner_type mod(const custom_type &a) const {
             checkType(a, "%");
-            return std::get<interval::interval<type>>(data)
-                   % std::get<interval::interval<type>>(a.data).any().value();
+            return std::get<interval::interval<typeInt>>(data)
+                   % std::get<interval::interval<typeInt>>(a.data).any().value();
+            throw std::logic_error("You could not get remainder of float type");
         }
 
 
@@ -178,39 +192,29 @@ namespace custom {
 
         custom_type& operator=(const custom_type &a) = default;
 
-        template<typename type>
         void operator+=(const custom_type &a) {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator +=, error: could not add of different types");
-            data = this->operator+<type>(a);
+            checkType(a, "+=");
+            data = this->operator+(a);
         }
 
-        template<typename type>
         void operator-=(const custom_type &a) {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator -=, error: could not subtract of different types");
-            data = this->operator-<type>(a);
+            checkType(a, "-=");
+            data = this->operator-(a);
         }
 
-        template<typename type>
         void operator*=(const custom_type &a) {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator +=, error: could not multiply of different types");
-            data = this->operator*<type>(a);
+            checkType(a, "*=");
+            data = this->operator*(a);
         }
 
-        template<typename type>
         void operator/=(const custom_type &a) {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator +=, error: could not divide of different types");
-            data = this->operator/<type>(a);
+            checkType(a, "/=");
+            data = this->operator/(a);
         }
 
-        template<typename type>
         void operator%=(const custom_type &a) {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator +=, error: could not get % of different types");
-            data = this->operator%<type>(a);
+            checkType(a, "%=");
+            data = this->operator%(a);
         }
 #undef subst
 

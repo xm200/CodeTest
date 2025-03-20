@@ -76,11 +76,12 @@ int main(int argc, char *argv[]) {
 
     interval::interval<typeInt> buf, buf2;
     buf.add_interval(interval::minimal<typeInt>(),123);
-    buf2.add_point(1);
+    buf2.add_point(1223);
 
     custom::custom_type a(buf);
     custom::custom_type b(buf2);
-    a = a < b;
+    a = a + b;
+    a += b;
 
     std::cout << std::get<interval::interval<typeInt>>(a.data).print();
     return 0;

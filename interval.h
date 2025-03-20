@@ -500,7 +500,7 @@ namespace interval {
         }
 
         void remainder_in(interval &buf, const T &val) const {
-            static_assert(std::is_arithmetic<T>(), "you cannot divide with strings");
+            static_assert(std::is_signed<T>() || std::is_unsigned<T>(), "you cannot divide with strings");
             for (auto &[fst, snd] : intervals) {
                 auto len = snd.second - fst.second;
                 // fst.first != 1 || snd.first != 1 -> -INF or +INF -> there is interval with len > val
