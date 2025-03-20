@@ -137,8 +137,61 @@ namespace custom {
             data = this->operator%(a);
         }
 
-    protected:
+        struct node {
+            node *parent{};
+            node *children[26] = {};
+            node *parent_am{};
+            char name;
+//            node *am[26] = {};
+            bool is_end{};
 
+            inline void check(char where) {
+                if (!children[where - 'a']) children[where - 'a'] = new node(where);
+            }
+
+            void create(const std::string &s, int cur = 0) {
+                if (cur == s.size()) {
+                    is_end = true;
+                    return;
+                }
+                check(s[cur]);
+                create(s, cur + 1);
+            }
+
+            void bfs() {
+                std::queue<node *> q;
+                q.push(this);
+                parent = this;
+
+                while (!q.empty()) {
+                    auto v = q.front();
+                    q.pop();
+
+                    auto go = parent->parent_am;
+                    while (!go->children[name - 'a'] && go != go->parent) go = go->parent_am;
+                    v->parent_am = go->children[name - 'a'];
+                    for (auto &x : v->children) q.push(x);
+                }
+            }
+
+            node *went(char c) {
+                auto go = this;
+                while (!go->children[c - 'a'] && go != go->parent) go = go->parent_am;
+                return go->children[c - 'a'];
+            }
+
+            explicit node(char n) : name(n) {};
+
+            ~node() = default;
+        };
+
+        [[nodiscard]] static inner_type extract(const std::string &other) { // if (a == 2 || b == 3) && c + 2 == 5
+            
+            return {};
+        }
+
+    protected:
+        std::vector<std::string> opers = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
         template<typename T>
         [[nodiscard]] inner_type less_in(
                      const std::function<void(interval::interval<T> &it, const custom_type &a)> &it,
