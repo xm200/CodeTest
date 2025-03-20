@@ -99,7 +99,74 @@ namespace custom {
         [[nodiscard]] inner_type operator-(const custom_type &a) const { subst_digit_only(subtract, a) }
         [[nodiscard]] inner_type operator*(const custom_type &a) const { subst_digit_only(multiply, a) }
         [[nodiscard]] inner_type operator/(const custom_type &a) const { subst_digit_only(divide, a) }
-        [[nodiscard]] inner_type operator%(const custom_type &a) const { subst_digit_only(mod, a) }
+        [[nodiscard]] inner_type operator%(const custom_type &a) const { return mod(a); }
+
+#undef subst_digit_only
+#undef subst
+
+        custom_type& operator=(const inner_type &a) {
+            data = a;
+            type = get_type(a);
+            return *this;
+        }
+
+        custom_type& operator=(const custom_type &a) = default;
+
+        void operator+=(const custom_type &a) {
+            checkType(a, "+=");
+            data = this->operator+(a);
+        }
+
+        void operator-=(const custom_type &a) {
+            checkType(a, "-=");
+            data = this->operator-(a);
+        }
+
+        void operator*=(const custom_type &a) {
+            checkType(a, "*=");
+            data = this->operator*(a);
+        }
+
+        void operator/=(const custom_type &a) {
+            checkType(a, "/=");
+            data = this->operator/(a);
+        }
+
+        void operator%=(const custom_type &a) {
+            checkType(a, "%=");
+            data = this->operator%(a);
+        }
+
+    protected:
+
+        template<typename T>
+        [[nodiscard]] inner_type less_in(
+                     const std::function<void(interval::interval<T> &it, const custom_type &a)> &it,
+                     const custom_type &a,
+                     const std::string &n) const {
+            checkType(a, n);
+            interval::interval<T> buf;
+            it(buf, a);
+            return buf * std::get<interval::interval<T>>(data);
+        }
+
+        void checkType(const custom_type &a, const std::string &name_op) const {
+            if (this->type != a.type)
+                throw std::logic_error("Function operator " + name_op + ", error: could not compare different types!");
+        }
+
+        template<typename type>
+        [[nodiscard]] static inline bool can_cast(const inner_type &d) {
+            return std::get_if<type>(&d) != nullptr;
+        }
+
+        [[nodiscard]] static short get_type(const inner_type &d) {
+            if (can_cast<interval::interval<typeInt>>(d)) return types::INT;
+            if (can_cast<interval::interval<typeFloat>>(d)) return types::FLOAT;
+            if (can_cast<interval::interval<std::string>>(d)) return types::STRING;
+            if (can_cast<std::vector<custom_type*>>(d)) return types::VECTOR;
+            throw std::runtime_error("Function: can_cast(), error: UNKNOWN TYPE");
+        }
 
         template<typename T>
         [[nodiscard]] inner_type less(const custom_type &a) const {
@@ -180,73 +247,6 @@ namespace custom {
             checkType(a, "%");
             return std::get<interval::interval<typeInt>>(data)
                    % std::get<interval::interval<typeInt>>(a.data).any().value();
-            throw std::logic_error("You could not get remainder of float type");
-        }
-
-
-        custom_type& operator=(const inner_type &a) {
-            data = a;
-            type = get_type(a);
-            return *this;
-        }
-
-        custom_type& operator=(const custom_type &a) = default;
-
-        void operator+=(const custom_type &a) {
-            checkType(a, "+=");
-            data = this->operator+(a);
-        }
-
-        void operator-=(const custom_type &a) {
-            checkType(a, "-=");
-            data = this->operator-(a);
-        }
-
-        void operator*=(const custom_type &a) {
-            checkType(a, "*=");
-            data = this->operator*(a);
-        }
-
-        void operator/=(const custom_type &a) {
-            checkType(a, "/=");
-            data = this->operator/(a);
-        }
-
-        void operator%=(const custom_type &a) {
-            checkType(a, "%=");
-            data = this->operator%(a);
-        }
-#undef subst
-
-    protected:
-
-        template<typename T>
-        [[nodiscard]] inner_type less_in(
-                     const std::function<void(interval::interval<T> &it, const custom_type &a)> &it,
-                     const custom_type &a,
-                     const std::string &n) const {
-            checkType(a, n);
-            interval::interval<T> buf;
-            it(buf, a);
-            return buf * std::get<interval::interval<T>>(data);
-        }
-
-        void checkType(const custom_type &a, const std::string &name_op) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator " + name_op + ", error: could not compare different types!");
-        }
-
-        template<typename type>
-        [[nodiscard]] static inline bool can_cast(const inner_type &d) {
-            return std::get_if<type>(&d) != nullptr;
-        }
-
-        [[nodiscard]] static short get_type(const inner_type &d) {
-            if (can_cast<interval::interval<typeInt>>(d)) return types::INT;
-            if (can_cast<interval::interval<typeFloat>>(d)) return types::FLOAT;
-            if (can_cast<interval::interval<std::string>>(d)) return types::STRING;
-            if (can_cast<std::vector<custom_type*>>(d)) return types::VECTOR;
-            throw std::runtime_error("Function: can_cast(), error: UNKNOWN TYPE");
         }
     };
 }
