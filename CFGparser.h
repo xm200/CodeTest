@@ -143,15 +143,15 @@ namespace custom {
             node *parent_am{};
             char name;
 //            node *am[26] = {};
-            bool is_end{};
+            std::vector<std::pair<std::string, int>> endings{};
 
             inline void check(char where) {
                 if (!children[where - 'a']) children[where - 'a'] = new node(where);
             }
 
-            void create(const std::string &s, int cur = 0) {
+            void create(const std::string &s, int idx, int cur = 0) {
                 if (cur == s.size()) {
-                    is_end = true;
+                    endings.emplace_back(s, idx);
                     return;
                 }
                 check(s[cur]);
@@ -162,14 +162,21 @@ namespace custom {
                 std::queue<node *> q;
                 q.push(this);
                 parent = this;
+                parent_am = this;
 
                 while (!q.empty()) {
                     auto v = q.front();
                     q.pop();
 
-                    auto go = parent->parent_am;
-                    while (!go->children[name - 'a'] && go != go->parent) go = go->parent_am;
-                    v->parent_am = go->children[name - 'a'];
+                    auto go = v->parent_am;
+                    if (go == this) {
+                        v->parent_am = this;
+                    }
+                    else {
+                        while (!go->children[name - 'a'] && go != go->parent) go = go->parent_am;
+                        v->parent_am = go->children[name - 'a'];
+                    }
+                    for (auto &x : v->parent_am->endings) v->endings.emplace_back(x);
                     for (auto &x : v->children) q.push(x);
                 }
             }
@@ -177,21 +184,42 @@ namespace custom {
             node *went(char c) {
                 auto go = this;
                 while (!go->children[c - 'a'] && go != go->parent) go = go->parent_am;
-                return go->children[c - 'a'];
+                return (go->children[c - 'a'] == nullptr ? this:go->children[c - 'a']);
+            }
+
+            [[nodiscard]] std::pair<size_t , size_t> go(const std::string &other) {
+                auto _root  = this;
+                std::pair<size_t, size_t> met[12];
+                for (auto & i : met) i = {-1, -1};
+
+                for (size_t idx = 0; idx < other.size(); ++idx) {
+                    _root = _root->went(other[idx]);
+                    for (auto & ending : _root->endings) {
+                        met[ending.second].first = idx - ending.first.size() + 1;
+                        met[ending.second].second = idx + 1;
+                    }
+                }
+                for (auto &x : met) if (x.first != -1) return x;
+                return {-1, -1};
             }
 
             explicit node(char n) : name(n) {};
-
+            node() = default;
             ~node() = default;
         };
 
-        [[nodiscard]] static inner_type extract(const std::string &other) { // if (a == 2 || b == 3) && c + 2 == 5
-            
+        [[nodiscard]] inner_type extract(const std::string &other) { // if (a == 2 || b == 3) && c + 2 == 5
+            for(int i = 0 ; i < opers.size(); ++i) root.create(opers[i], i);
+            root.bfs();
+
+
             return {};
         }
 
     protected:
         std::vector<std::string> opers = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+        node root;
+
         template<typename T>
         [[nodiscard]] inner_type less_in(
                      const std::function<void(interval::interval<T> &it, const custom_type &a)> &it,
