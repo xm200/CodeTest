@@ -210,32 +210,32 @@ namespace custom {
 
         ~custom_type() = default;
 
-#define subst(fun, a) \
-    switch (type) { \
-        case INT: return fun<typeInt>(a); \
-        case FLOAT: return fun<typeFloat>(a); \
-        case STRING: return fun<std::string>(a); \
+#define subst(fun, a, b) \
+    switch (get_type(a)) { \
+        case INT: return fun<typeInt>(a, b); \
+        case FLOAT: return fun<typeFloat>(a, b); \
+        case STRING: return fun<std::string>(a, b); \
         default: throw std::runtime_error("unknown type"); \
     }
 
-#define subst_digit_only(fun, a)  \
-    switch (type) { \
-        case INT: return fun<typeInt>(a); \
-        case FLOAT: return fun<typeFloat>(a); \
+#define subst_digit_only(fun, a, b)  \
+    switch (get_type(a)) { \
+        case INT: return fun<typeInt>(a, b); \
+        case FLOAT: return fun<typeFloat>(a, b); \
         default: throw std::runtime_error("unknown type"); \
     }
 
-        [[nodiscard]] inner_type operator<(const custom_type &a) const {subst(less, a)}
-        [[nodiscard]] inner_type operator>(const custom_type &a) const {subst(more, a)}
-        [[nodiscard]] inner_type operator<=(const custom_type &a) const {subst(less_equal, a)}
-        [[nodiscard]] inner_type operator>=(const custom_type &a) const {subst(more_equal, a)}
-        [[nodiscard]] inner_type operator==(const custom_type &a) const {subst(equal, a)}
-        [[nodiscard]] inner_type operator!=(const custom_type &a) const {subst(not_equal, a)}
-        [[nodiscard]] inner_type operator+(const custom_type &a) const { subst_digit_only(add, a) }
-        [[nodiscard]] inner_type operator-(const custom_type &a) const { subst_digit_only(subtract, a) }
-        [[nodiscard]] inner_type operator*(const custom_type &a) const { subst_digit_only(multiply, a) }
-        [[nodiscard]] inner_type operator/(const custom_type &a) const { subst_digit_only(divide, a) }
-        [[nodiscard]] inner_type operator%(const custom_type &a) const { return mod(a); }
+        [[nodiscard]] inner_type friend operator<(const inner_type &a, const inner_type &b) { subst(less, a, b) }
+        [[nodiscard]] inner_type friend operator>(const inner_type &a, const inner_type &b) { subst(more, a, b) }
+        [[nodiscard]] inner_type friend operator<=(const inner_type &a, const inner_type &b) { subst(less_equal, a, b) }
+        [[nodiscard]] inner_type friend operator>=(const inner_type &a, const inner_type &b) { subst(more_equal, a, b) }
+        [[nodiscard]] inner_type friend operator==(const inner_type &a, const inner_type &b) { subst(equal, a, b) }
+        [[nodiscard]] inner_type friend operator!=(const inner_type &a, const inner_type &b) { subst(not_equal, a, b) }
+        [[nodiscard]] inner_type friend operator+(const inner_type &a, const inner_type &b) { subst_digit_only(add, a, b) }
+        [[nodiscard]] inner_type friend operator-(const inner_type &a, const inner_type &b) { subst_digit_only(subtract, a, b) }
+        [[nodiscard]] inner_type friend operator*(const inner_type &a, const inner_type &b) { subst_digit_only(multiply, a, b) }
+        [[nodiscard]] inner_type friend operator/(const inner_type &a, const inner_type &b) { subst_digit_only(divide, a, b) }
+        [[nodiscard]] inner_type friend operator%(const inner_type &a, const inner_type &b) { return mod(a, b); }
 
 #undef subst_digit_only
 #undef subst
@@ -248,16 +248,16 @@ namespace custom {
 
         custom_type& operator=(const custom_type &a) = default;
 
-        void operator+=(const custom_type &a) { checkType(a, "+="); data = this->operator+(a); }
-        void operator-=(const custom_type &a) { checkType(a, "-="); data = this->operator-(a); }
-        void operator*=(const custom_type &a) { checkType(a, "*="); data = this->operator*(a); }
-        void operator/=(const custom_type &a) { checkType(a, "/="); data = this->operator/(a); }
-        void operator%=(const custom_type &a) { checkType(a, "%="); data = this->operator%(a); }
+        friend inner_type & operator+=(inner_type &a, const inner_type &b) { checkType(a, b, "+="); a = (a + b); return a; }
+        friend inner_type & operator-=(inner_type &a, const inner_type &b) { checkType(a, b, "-="); a = (a - b); return a; }
+        friend inner_type & operator*=(inner_type &a, const inner_type &b) { checkType(a, b, "*="); a = (a * b); return a; }
+        friend inner_type & operator/=(inner_type &a, const inner_type &b) { checkType(a, b, "/="); a = (a / b); return a; }
+        friend inner_type & operator%=(inner_type &a, const inner_type &b) { checkType(a, b, "%="); a = (a % b); return a; }
 
         [[nodiscard]] inner_type extract(const str_type &other) {
             for(int i = 0; i < operations.size(); ++i) root.add_key(operations[i], i);
             root.init();
-            return _extract(other);
+//            return _extract(other); ///todo: make wrapper on extractor
         }
 
 
@@ -300,29 +300,59 @@ namespace custom {
             }
         }
 
-        [[nodiscard]] inner_type _extract(const str_type &other) { // if (a == 2 || b == 3) && c + 2 == 5
+        [[nodiscard]] static std::vector<std::pair<std::string, inner_type>> push(inner_type &a, inner_type &b, short op_number, const std::string &name) {
+            switch (op_number) {
+                case 0: return {{name, a *= b}}; // a == 3 and b == 4 -> [["a", 3], ["b", 4]]
+                case 2: return {{name, a == b}};
+                case 3: return {{name, a != b}};
+                case 4: return {{name, a > b}};
+                case 5: return {{name, a < b}};
+                case 6: return {{name, a >= b}};
+                case 7: return {{name, a <= b}};
+                case 8: return {{name, a + b}};
+                case 9: return {{name, a - b}};
+                case 10: return {{name, a / b}};
+                case 11: return {{name, a % b}};
+                default:
+                    break;
+            }
+        }
+
+        [[nodiscard]] variables _extract(const str_type &other, variables &v) { // if (a == 2 || b == 3) && c + 2 == 5
             auto split_idx = root.go(other);
-            if (split_idx.second == -1) return mega_cast(other);
+            if (split_idx.second == -1) { // a == | 2
+
+            } else if (split_idx.second == 1) {
+                ///todo: add or processing
+            }
             auto l1 = split_idx.first.second;
             auto r1 = split_idx.first.second;
             auto ignor = _extract(other.substr(0, l1));
             auto ignor2 = _extract(other.substr(l1, r1));
+
         }
 
     protected:
+
         template<typename T>
-        [[nodiscard]] inner_type less_in(
-                     const std::function<void(interval::interval<T> &it, const custom_type &a)> &it,
-                     const custom_type &a,
-                     const std::string &n) const {
-            checkType(a, n);
+        [[nodiscard]] static inner_type less_in(
+                const std::function<void(interval::interval<T> &it, const inner_type &a)> &it,
+                const inner_type &a,
+                const inner_type &b,
+                const std::string &n) {
+            checkType(a, b, n);
             interval::interval<T> buf;
             it(buf, a);
-            return buf * std::get<interval::interval<T>>(data);
+            return buf * std::get<interval::interval<T>>(b);
         }
 
         void checkType(const custom_type &a, const std::string &name_op) const {
             if (this->type != a.type)
+                throw std::logic_error("Function operator " + name_op + ", error: could not compare different types!");
+        }
+
+        static void checkType(const inner_type &a, const inner_type &b, const std::string &name_op) {
+            if (get_type(b) != get_type(a))
                 throw std::logic_error("Function operator " + name_op + ", error: could not compare different types!");
         }
 
@@ -340,82 +370,82 @@ namespace custom {
         }
 
         template<typename T>
-        [[nodiscard]] inner_type less(const custom_type &a) const {
-            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
-                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.data).any().value());
-            }, a, "<");
+        [[nodiscard]] static inner_type less(const inner_type &a, const inner_type &b) {
+            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
+                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a).any().value());
+            }, a, b, "<");
         }
 
         template<typename T>
-        [[nodiscard]] inner_type more(const custom_type &a) const {
-            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
-                buf.add_interval(std::get<interval::interval<T>>(a.data).any().value(),interval::maximal<T>());
-            }, a, ">");
+        [[nodiscard]] static inner_type more(const inner_type &a, const inner_type &b) {
+            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
+                buf.add_interval(std::get<interval::interval<T>>(a).any().value(),interval::maximal<T>());
+            }, a, b, ">");
         }
 
         template<typename T>
-        [[nodiscard]] inner_type less_equal(const custom_type &a) const {
-            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
-                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.data).any().value());
-                buf.add_point(std::get<interval::interval<T>>(a.data).any().value());
-            }, a, "<=");
+        [[nodiscard]] static inner_type less_equal(const inner_type &a, const inner_type &b) {
+            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
+                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a).any().value());
+                buf.add_point(std::get<interval::interval<T>>(a).any().value());
+            }, a, b, "<=");
         }
 
         template<typename T>
-        [[nodiscard]] inner_type more_equal(const custom_type &a) const {
-            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
-                buf.add_interval(std::get<interval::interval<T>>(a.data).any().value(), interval::maximal<T>());
-                buf.add_point(std::get<interval::interval<T>>(a.data).any().value());
-            }, a, ">=");
+        [[nodiscard]] static inner_type more_equal(const inner_type &a, const inner_type &b) {
+            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
+                buf.add_interval(std::get<interval::interval<T>>(a).any().value(), interval::maximal<T>());
+                buf.add_point(std::get<interval::interval<T>>(a).any().value());
+            }, a, b, ">=");
         }
 
         template<typename T>
-        [[nodiscard]] inner_type equal(const custom_type &a) const {
-            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
-                buf.add_point(std::get<interval::interval<T>>(a.data).any().value());
-            }, a, "==");
+        [[nodiscard]] static inner_type equal(const inner_type &a, const inner_type &b) {
+            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
+                buf.add_point(std::get<interval::interval<T>>(a).any().value());
+            }, a, b, "==");
         }
 
         template<typename T>
-        [[nodiscard]] inner_type not_equal(const custom_type &a) const {
-            return less_in<T>([](interval::interval<T> &buf, const custom_type &a) {
-                buf.add_interval(std::get<interval::interval<T>>(a.data).any().value(), interval::maximal<T>());
-                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.data).any().value());
-            }, a, "!=");
+        [[nodiscard]] static inner_type not_equal(const inner_type &a, const inner_type &b) {
+            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
+                buf.add_interval(std::get<interval::interval<T>>(a).any().value(), interval::maximal<T>());
+                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a).any().value());
+            }, a, b, "!=");
         }
 
         template<typename T>
-        [[nodiscard]] inner_type add(const custom_type &a) const {
-            checkType(a, "+");
-            return std::get<interval::interval<T>>(data)
-                   + std::get<interval::interval<T>>(a.data).any().value();
+        [[nodiscard]] static inner_type add(const inner_type &a, const inner_type &b) {
+            checkType(a, b, "+");
+            return std::get<interval::interval<T>>(a)
+                   + std::get<interval::interval<T>>(b).any().value();
         }
 
         template<typename type>
-        [[nodiscard]] inner_type subtract(const custom_type &a) const {
-            checkType(a, "-");
-            return std::get<interval::interval<type>>(data)
-                   - std::get<interval::interval<type>>(a.data).any().value();
+        [[nodiscard]] static inner_type subtract(const inner_type &a, const inner_type &b) {
+            checkType(a, b, "-");
+            return std::get<interval::interval<type>>(a)
+                   - std::get<interval::interval<type>>(b).any().value();
         }
 
         template<typename type>
-        [[nodiscard]] inner_type multiply(const custom_type &a) const {
-            checkType(a, "*");
-            return std::get<interval::interval<type>>(data)
-                   * std::get<interval::interval<type>>(a.data).any().value();
+        [[nodiscard]] static inner_type multiply(const inner_type &a, const inner_type &b) {
+            checkType(a, b, "*");
+            return std::get<interval::interval<type>>(a)
+                   * std::get<interval::interval<type>>(b).any().value();
         }
 
         template<typename type>
-        [[nodiscard]] inner_type divide(const custom_type &a) const {
-            checkType(a, "/");
-            return std::get<interval::interval<type>>(data)
-                   / std::get<interval::interval<type>>(a.data).any().value();
+        [[nodiscard]] static  inner_type divide(const inner_type &a, const inner_type &b) {
+            checkType(a, b, "/");
+            return std::get<interval::interval<type>>(a)
+                   / std::get<interval::interval<type>>(b).any().value();
         }
 
-        [[nodiscard]] inner_type mod(const custom_type &a) const {
-            checkType(a, "%");
-            return std::get<interval::interval<typeInt>>(data)
-                   % std::get<interval::interval<typeInt>>(a.data).any().value();
+        [[nodiscard]] static inner_type mod(const inner_type &a, const inner_type &b) {
+            checkType(a, b, "%");
+            return std::get<interval::interval<typeInt>>(a)
+                   % std::get<interval::interval<typeInt>>(b).any().value();
         }
     };
 }
