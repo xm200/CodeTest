@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "misc-no-recursion"
 //
 // Created by xm200 on 05.03.2025. =uwu=
 //
@@ -18,53 +20,87 @@
 #include <iostream>
 
 namespace custom {
-    template<typename T>
+    template<typename S>
     struct vec_line {
-        const std::vector<T> *vec = nullptr;
+        const S *vec = nullptr;
         std::size_t l = 0, len = 0;
 
-        [[nodiscard]] std::size_t size() const { return len; }
+        vec_line() = default;
 
-        [[nodiscard]] typename std::vector<T>::iterator begin() _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] S extract() const {
+            return vec->substr(l, len);
+        }
+
+        [[maybe_unused]] vec_line(vec_line<S> &data) : vec(data.vec), l(data.l), len(data.len) {}
+
+        [[maybe_unused]] vec_line(const S *vec_, std::size_t l_, std::size_t len_) : vec(vec_), l(l_), len(len_) {}
+
+        [[maybe_unused]] explicit vec_line(S data) : vec(&data) {
+            len = data.size();
+        }
+
+        [[maybe_unused]] [[nodiscard]] std::size_t size() const _GLIBCXX_NOEXCEPT { return len; }
+
+        [[maybe_unused]] [[nodiscard]] typename S::iterator begin() _GLIBCXX_NOEXCEPT
         { return vec->begin() + l; }
-        [[nodiscard]] typename std::vector<T>::const_iterator begin() const _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] typename S::const_iterator begin() const _GLIBCXX_NOEXCEPT
         {return vec->cbegin() + l; }
 
-        [[nodiscard]] typename std::vector<T>::iterator end() _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] typename S::iterator end() _GLIBCXX_NOEXCEPT
         { return vec->begin() + l + len; }
-        [[nodiscard]] typename std::vector<T>::const_iterator end() const _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] typename S::const_iterator end() const _GLIBCXX_NOEXCEPT
         {return vec->cbegin() + l + len; }
 
-        [[nodiscard]] T& operator[](std::size_t i) _GLIBCXX_NOEXCEPT {
-#if defined(DEBUG_MODE)
-            if (i >= len) throw std::out_of_range("index out of range");
-#endif
-            return vec->operator[](i) + l;
+        [[maybe_unused]] [[nodiscard]] auto &front() _GLIBCXX_NOEXCEPT {
+            return vec->operator[](l);
         }
-        [[nodiscard]] T& operator[](std::size_t i) const _GLIBCXX_NOEXCEPT {
+        [[maybe_unused]] [[nodiscard]] auto &front() const _GLIBCXX_NOEXCEPT {
+            return vec->operator[](l);
+        }
+
+        [[maybe_unused]] [[nodiscard]] auto &back() _GLIBCXX_NOEXCEPT {
+            return vec->operator[](l + len - 1);
+        }
+        [[maybe_unused]] [[nodiscard]] auto &back() const _GLIBCXX_NOEXCEPT {
+            return vec->operator[](l + len - 1);
+        }
+
+        [[maybe_unused]] [[nodiscard]] vec_line<S> substr(const std::size_t pos, const std::size_t sz)
+        const _GLIBCXX_NOEXCEPT {
+            return {vec, pos + l, std::min(sz, len - pos - l)};
+        }
+
+        [[maybe_unused]] [[nodiscard]] auto& operator[](std::size_t i) _GLIBCXX_NOEXCEPT {
 #if defined(DEBUG_MODE)
             if (i >= len) throw std::out_of_range("index out of range");
 #endif
-            return vec->operator[](i) + l;
+            return vec->operator[](i + l);
+        }
+        [[nodiscard]] auto& operator[](std::size_t i) const _GLIBCXX_NOEXCEPT {
+#if defined(DEBUG_MODE)
+            if (i >= len) throw std::out_of_range("index out of range");
+#endif
+            return vec->operator[](i + l);
         }
     };
 
-    template<typename T>
-    [[maybe_unused]] vec_line<T> vl_substr(const std::vector<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+    template<typename S>
+    [[maybe_unused]] vec_line<S> vl_substr(const S &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
         return {&vec, pos, std::min(len, vec.size() - pos)};
     }
-    template<typename T>
-    [[maybe_unused]] vec_line<T> vl_substr(const vec_line<T> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
+    template<typename S>
+    [[maybe_unused]] vec_line<S> vl_substr(const vec_line<S> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
         return {vec.vec, pos + vec.l, std::min(len, vec.size() - pos - vec.l)};
     }
 
-    std::vector<std::string> opers = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+    std::vector<std::string> operations = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
 
+    using str_type = custom::vec_line<std::string>;
     struct node {
         node *parent{};
         node *children[26] = {};
         node *parent_am{};
-        char name;
+        char name{};
 //            node *am[26] = {};
         std::vector<std::pair<std::string, int>> endings{};
 
@@ -72,16 +108,16 @@ namespace custom {
             if (!children[where - 'a']) children[where - 'a'] = new node(where);
         }
 
-        void create(const std::string &s, int idx, int cur = 0) {
+        void add_key(const std::string &s, int idx, int cur = 0) {
             if (cur == s.size()) {
                 endings.emplace_back(s, idx);
                 return;
             }
             check(s[cur]);
-            create(s, cur + 1);
+            add_key(s, cur + 1);
         }
 
-        void bfs() {
+        void init() {
             std::queue<node *> q;
             q.push(this);
             parent = this;
@@ -104,22 +140,22 @@ namespace custom {
             }
         }
 
-        node *went(char c) {
+        node *detect(char c) {
             auto go = this;
             while (!go->children[c - 'a'] && go != go->parent) go = go->parent_am;
             return (go->children[c - 'a'] == nullptr ? this:go->children[c - 'a']);
         }
 
-        [[nodiscard]] std::pair<std::pair<size_t , size_t>, size_t> go(const std::string &other, size_t l, size_t r) {
+        [[nodiscard]] std::pair<std::pair<size_t , size_t>, size_t> go(const str_type &other) {
             auto _root  = this;
             std::pair<size_t, size_t> met[12];
             for (auto & i : met) i = {-1, -1};
             int brackets = 0;
-            if (other[l]== '(' && other[r - 1] == ')') return go(other, l + 1, r - 1);
+            if (other.front()== '(' && other.back() == ')') return go(other.substr(1, other.size() - 2));
             auto lamda = [](const char c) { return 'a' <= c && c <= 'z'; };
 
-            for (size_t idx = l; idx < r; ++idx) {
-                _root = _root->went(other[idx]);
+            for (size_t idx = 0; idx < other.size(); ++idx) {
+                _root = _root->detect(other[idx]);
 
                 for (auto & ending : _root->endings) {
                     if (other[idx] == '(') ++brackets;
@@ -143,9 +179,21 @@ namespace custom {
     } root;
 
 
+    [[nodiscard]] str_type erase_spaces(const str_type &other) {
+        size_t l = 0, r = other.size();
+        while (other[l] == ' ' && l < other.size()) ++l;
+        if (l == other.size()) throw std::logic_error("empty string if function erase_spaces");
+        while (other[r - 1] == ' ' && r > 0) --r;
+        return other.substr(l, other.size() - r);
+    }
+
     struct custom_type {
-        using inner_type = std::variant<interval::interval<typeInt>, interval::interval<typeFloat>, \
-                interval::interval<std::string>, std::vector<custom_type*>>;
+        using inner_type = std::variant<
+                interval::interval<typeInt>,
+                interval::interval<typeFloat>,
+                interval::interval<std::string>,
+                std::vector<custom_type*>>;
+
 
         enum types {
             INT, FLOAT, STRING, VECTOR, UNKNOWN
@@ -167,6 +215,7 @@ namespace custom {
         case STRING: return fun<std::string>(a); \
         default: throw std::runtime_error("unknown type"); \
     }
+
 #define subst_digit_only(fun, a)  \
     switch (type) { \
         case INT: return fun<typeInt>(a); \
@@ -197,48 +246,23 @@ namespace custom {
 
         custom_type& operator=(const custom_type &a) = default;
 
-        void operator+=(const custom_type &a) {
-            checkType(a, "+=");
-            data = this->operator+(a);
+        void operator+=(const custom_type &a) { checkType(a, "+="); data = this->operator+(a); }
+        void operator-=(const custom_type &a) { checkType(a, "-="); data = this->operator-(a); }
+        void operator*=(const custom_type &a) { checkType(a, "*="); data = this->operator*(a); }
+        void operator/=(const custom_type &a) { checkType(a, "/="); data = this->operator/(a); }
+        void operator%=(const custom_type &a) { checkType(a, "%="); data = this->operator%(a); }
+
+        [[nodiscard]] inner_type extract(const str_type &other) {
+            for(int i = 0; i < operations.size(); ++i) root.add_key(operations[i], i);
+            root.init();
+            return _extract(other);
         }
 
-        void operator-=(const custom_type &a) {
-            checkType(a, "-=");
-            data = this->operator-(a);
-        }
-
-        void operator*=(const custom_type &a) {
-            checkType(a, "*=");
-            data = this->operator*(a);
-        }
-
-        void operator/=(const custom_type &a) {
-            checkType(a, "/=");
-            data = this->operator/(a);
-        }
-
-        void operator%=(const custom_type &a) {
-            checkType(a, "%=");
-            data = this->operator%(a);
-        }
-
-        [[nodiscard]] inner_type extract(const std::string &other) {
-            for(int i = 0 ; i < opers.size(); ++i) root.create(opers[i], i);
-            root.bfs();
-            return extract(other, 0, other.size());
-        }
-
-        [[nodiscard]] static std::string erase(const std::string &other) {
-            size_t l = 0, r = other.size();
-            while (other[l] == ' ' && l < other.size()) ++l;
-            while (other[r - 1] == ' ' && r > 0) --r;
-            return other.substr(l, other.size() - r);
-        }
 
         [[nodiscard]] static short get_type(const std::string &s) {
             if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
             bool has_dot = false;
-            if (s == ".") return UNKNOWN;
+            if (s.size() == 1 && s.front() == '.') return UNKNOWN;
             for (auto chr: s) {
                 if (chr == '.') {
                     if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
@@ -249,7 +273,8 @@ namespace custom {
             return (has_dot) ? FLOAT : INT;
         }
 
-        [[nodiscard]] static inline inner_type mega_cast(const std::string &s) {
+        [[nodiscard]] static inline inner_type mega_cast(const str_type &s_buf) {
+            auto s = s_buf.extract();
             switch (get_type(s)) {
                 case UNKNOWN: throw std::runtime_error("Function mega_cast() : got unknown type!"); /// todo: add variable
                 case INT: {
@@ -270,13 +295,13 @@ namespace custom {
             }
         }
 
-        [[nodiscard]] inner_type extract(const std::string &other, size_t l, size_t r) { // if (a == 2 || b == 3) && c + 2 == 5
-            auto split_idx = root.go(other, l, r);
+        [[nodiscard]] inner_type _extract(const str_type &other) { // if (a == 2 || b == 3) && c + 2 == 5
+            auto split_idx = root.go(other);
             if (split_idx.second == -1) return mega_cast(other);
             auto l1 = split_idx.first.second;
             auto r1 = split_idx.first.second;
-            auto ignor = extract(other.substr(0, l1), l1, r1);
-            auto ignor2 = extract(other.substr(l1, r1), l1, r1);
+            auto ignor = _extract(other.substr(0, l1));
+            auto ignor2 = _extract(other.substr(l1, r1));
         }
 
     protected:
@@ -640,3 +665,5 @@ namespace parse {
     };
 }
 #endif //CODE_TEST_CFG_PARSER_H
+
+#pragma clang diagnostic pop

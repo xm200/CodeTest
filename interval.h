@@ -586,7 +586,7 @@ namespace interval {
                 return out;
             }
 
-            // create a buffer to convert {x1}; {x2} to {x1; x2} and (x1; x2) + {x1} to [x1; x2)
+            // add_key a buffer to convert {x1}; {x2} to {x1; x2} and (x1; x2) + {x1} to [x1; x2)
             std::vector<typename std::set<inner_type>::iterator> point_buffer;
 
             // print a buffer to "{x1; x2; x3; ...; xk}" and clear buffer
