@@ -2,6 +2,8 @@
 
 **Usage**:
 
+    write =uwu=
+
 *Linux/Macos*
 
     ./CodeTest [attributes] path_to_file
