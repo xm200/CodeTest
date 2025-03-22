@@ -96,12 +96,12 @@ namespace custom {
     std::vector<std::string> operations = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
 
     using str_type = custom::vec_line<std::string>;
+
     struct node {
         node *parent{};
         node *children[26] = {};
         node *parent_am{};
         char name{};
-//            node *am[26] = {};
         std::vector<std::pair<std::string, int>> endings{};
 
         inline void check(char where) {
@@ -188,6 +188,8 @@ namespace custom {
     }
 
     struct custom_type {
+        using variables = std::map<std::string, custom_type*>;
+
         using inner_type = std::variant<
                 interval::interval<typeInt>,
                 interval::interval<typeFloat>,
@@ -273,23 +275,26 @@ namespace custom {
             return (has_dot) ? FLOAT : INT;
         }
 
-        [[nodiscard]] static inline inner_type mega_cast(const str_type &s_buf) {
-            auto s = s_buf.extract();
-            switch (get_type(s)) {
-                case UNKNOWN: throw std::runtime_error("Function mega_cast() : got unknown type!"); /// todo: add variable
+        [[nodiscard]] static inline inner_type mega_cast(const str_type &s, variables &v) {
+            auto _s = erase_spaces(s).extract();
+            switch (get_type(_s)) {
+                case UNKNOWN: {
+                    return v[_s]->data;
+                }
+
                 case INT: {
                     interval::interval<typeInt> buf;
-                    buf.add_point(std::stoll(s));
+                    buf.add_point(std::stoll(_s));
                     return buf;
                 }
                 case FLOAT: {
                     interval::interval<typeFloat> buf;
-                    buf.add_point(std::stod(s));
+                    buf.add_point(std::stod(_s));
                     return buf;
                 }
                 default: {
                     interval::interval<std::string> buf;
-                    buf.add_point(s);
+                    buf.add_point(_s);
                     return buf;
                 }
             }
@@ -305,7 +310,6 @@ namespace custom {
         }
 
     protected:
-
         template<typename T>
         [[nodiscard]] inner_type less_in(
                      const std::function<void(interval::interval<T> &it, const custom_type &a)> &it,
