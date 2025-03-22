@@ -58,6 +58,91 @@ namespace custom {
         return {vec.vec, pos + vec.l, std::min(len, vec.size() - pos - vec.l)};
     }
 
+    std::vector<std::string> opers = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+
+    struct node {
+        node *parent{};
+        node *children[26] = {};
+        node *parent_am{};
+        char name;
+//            node *am[26] = {};
+        std::vector<std::pair<std::string, int>> endings{};
+
+        inline void check(char where) {
+            if (!children[where - 'a']) children[where - 'a'] = new node(where);
+        }
+
+        void create(const std::string &s, int idx, int cur = 0) {
+            if (cur == s.size()) {
+                endings.emplace_back(s, idx);
+                return;
+            }
+            check(s[cur]);
+            create(s, cur + 1);
+        }
+
+        void bfs() {
+            std::queue<node *> q;
+            q.push(this);
+            parent = this;
+            parent_am = this;
+
+            while (!q.empty()) {
+                auto v = q.front();
+                q.pop();
+
+                auto go = v->parent_am;
+                if (go == this) {
+                    v->parent_am = this;
+                }
+                else {
+                    while (!go->children[name - 'a'] && go != go->parent) go = go->parent_am;
+                    v->parent_am = go->children[name - 'a'];
+                }
+                for (auto &x : v->parent_am->endings) v->endings.emplace_back(x);
+                for (auto &x : v->children) q.push(x);
+            }
+        }
+
+        node *went(char c) {
+            auto go = this;
+            while (!go->children[c - 'a'] && go != go->parent) go = go->parent_am;
+            return (go->children[c - 'a'] == nullptr ? this:go->children[c - 'a']);
+        }
+
+        [[nodiscard]] std::pair<std::pair<size_t , size_t>, size_t> go(const std::string &other, size_t l, size_t r) {
+            auto _root  = this;
+            std::pair<size_t, size_t> met[12];
+            for (auto & i : met) i = {-1, -1};
+            int brackets = 0;
+            if (other[l]== '(' && other[r - 1] == ')') return go(other, l + 1, r - 1);
+            auto lamda = [](const char c) { return 'a' <= c && c <= 'z'; };
+
+            for (size_t idx = l; idx < r; ++idx) {
+                _root = _root->went(other[idx]);
+
+                for (auto & ending : _root->endings) {
+                    if (other[idx] == '(') ++brackets;
+                    if (other[idx] == ')') --brackets;
+
+                    auto buf = ending.second - ending.first.size();
+
+                    if (brackets > 0) continue;
+                    if ((buf > 0 && lamda(other[buf])) || (idx + 1 < other.size() && lamda(other[idx + 1]))) continue;
+                    met[ending.second].first = buf + 1;
+                    met[ending.second].second = idx + 1;
+                }
+            }
+            for (auto x = 0; x < 12; ++x) if (met[x].first != -1 && met[x].second != -1) return {met[x], x};
+            return {{-1, -1}, static_cast<size_t>(-1)};
+        }
+
+        explicit node(char n) : name(n) {};
+        node() = default;
+        ~node() = default;
+    } root;
+
+
     struct custom_type {
         using inner_type = std::variant<interval::interval<typeInt>, interval::interval<typeFloat>, \
                 interval::interval<std::string>, std::vector<custom_type*>>;
@@ -137,88 +222,64 @@ namespace custom {
             data = this->operator%(a);
         }
 
-        struct node {
-            node *parent{};
-            node *children[26] = {};
-            node *parent_am{};
-            char name;
-//            node *am[26] = {};
-            std::vector<std::pair<std::string, int>> endings{};
-
-            inline void check(char where) {
-                if (!children[where - 'a']) children[where - 'a'] = new node(where);
-            }
-
-            void create(const std::string &s, int idx, int cur = 0) {
-                if (cur == s.size()) {
-                    endings.emplace_back(s, idx);
-                    return;
-                }
-                check(s[cur]);
-                create(s, cur + 1);
-            }
-
-            void bfs() {
-                std::queue<node *> q;
-                q.push(this);
-                parent = this;
-                parent_am = this;
-
-                while (!q.empty()) {
-                    auto v = q.front();
-                    q.pop();
-
-                    auto go = v->parent_am;
-                    if (go == this) {
-                        v->parent_am = this;
-                    }
-                    else {
-                        while (!go->children[name - 'a'] && go != go->parent) go = go->parent_am;
-                        v->parent_am = go->children[name - 'a'];
-                    }
-                    for (auto &x : v->parent_am->endings) v->endings.emplace_back(x);
-                    for (auto &x : v->children) q.push(x);
-                }
-            }
-
-            node *went(char c) {
-                auto go = this;
-                while (!go->children[c - 'a'] && go != go->parent) go = go->parent_am;
-                return (go->children[c - 'a'] == nullptr ? this:go->children[c - 'a']);
-            }
-
-            [[nodiscard]] std::pair<size_t , size_t> go(const std::string &other) {
-                auto _root  = this;
-                std::pair<size_t, size_t> met[12];
-                for (auto & i : met) i = {-1, -1};
-
-                for (size_t idx = 0; idx < other.size(); ++idx) {
-                    _root = _root->went(other[idx]);
-                    for (auto & ending : _root->endings) {
-                        met[ending.second].first = idx - ending.first.size() + 1;
-                        met[ending.second].second = idx + 1;
-                    }
-                }
-                for (auto &x : met) if (x.first != -1) return x;
-                return {-1, -1};
-            }
-
-            explicit node(char n) : name(n) {};
-            node() = default;
-            ~node() = default;
-        };
-
-        [[nodiscard]] inner_type extract(const std::string &other) { // if (a == 2 || b == 3) && c + 2 == 5
+        [[nodiscard]] inner_type extract(const std::string &other) {
             for(int i = 0 ; i < opers.size(); ++i) root.create(opers[i], i);
             root.bfs();
+            return extract(other, 0, other.size());
+        }
 
+        [[nodiscard]] static std::string erase(const std::string &other) {
+            size_t l = 0, r = other.size();
+            while (other[l] == ' ' && l < other.size()) ++l;
+            while (other[r - 1] == ' ' && r > 0) --r;
+            return other.substr(l, other.size() - r);
+        }
 
-            return {};
+        [[nodiscard]] static short get_type(const std::string &s) {
+            if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
+            bool has_dot = false;
+            if (s == ".") return UNKNOWN;
+            for (auto chr: s) {
+                if (chr == '.') {
+                    if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
+                    else has_dot = true;
+                }
+                else if (chr > '9' || chr < '0') return UNKNOWN;
+            }
+            return (has_dot) ? FLOAT : INT;
+        }
+
+        [[nodiscard]] static inline inner_type mega_cast(const std::string &s) {
+            switch (get_type(s)) {
+                case UNKNOWN: throw std::runtime_error("Function mega_cast() : got unknown type!"); /// todo: add variable
+                case INT: {
+                    interval::interval<typeInt> buf;
+                    buf.add_point(std::stoll(s));
+                    return buf;
+                }
+                case FLOAT: {
+                    interval::interval<typeFloat> buf;
+                    buf.add_point(std::stod(s));
+                    return buf;
+                }
+                default: {
+                    interval::interval<std::string> buf;
+                    buf.add_point(s);
+                    return buf;
+                }
+            }
+        }
+
+        [[nodiscard]] inner_type extract(const std::string &other, size_t l, size_t r) { // if (a == 2 || b == 3) && c + 2 == 5
+            auto split_idx = root.go(other, l, r);
+            if (split_idx.second == -1) return mega_cast(other);
+            auto l1 = split_idx.first.second;
+            auto r1 = split_idx.first.second;
+            auto ignor = extract(other.substr(0, l1), l1, r1);
+            auto ignor2 = extract(other.substr(l1, r1), l1, r1);
         }
 
     protected:
-        std::vector<std::string> opers = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
-        node root;
 
         template<typename T>
         [[nodiscard]] inner_type less_in(
@@ -300,8 +361,6 @@ namespace custom {
             return std::get<interval::interval<T>>(data)
                    + std::get<interval::interval<T>>(a.data).any().value();
         }
-
-
 
         template<typename type>
         [[nodiscard]] inner_type subtract(const custom_type &a) const {
@@ -424,96 +483,6 @@ namespace parse {
 
         return out;
     }
-
-    enum types { INT, DOUBLE, STRING, UNKNOWN };
-
-    struct basic_variable {
-        [[nodiscard]] inline static char tolower(const char c) { return (c > 'A' && c < 'Z') ? static_cast<char> (c - 'a' + 'A') : c; }
-
-        void generate_value() {} /// todo: ask fedor
-
-        void print() {
-            if (const int *pvi = std::get_if<int>(&start_value)) std::cout << *pvi;
-            else if (const double *pvd = std::get_if<double>(&start_value)) std::cout << *pvd;
-            else if (const std::string *pvs = std::get_if<std::string>(&start_value)) std::cout << *pvs;
-            std::cout << ' ';
-        }
-
-        inline void save_to_history(std::string &v) { changes.emplace_back(v); }
-
-        basic_variable() = default;
-
-        explicit basic_variable (const std::string &value_from_code) { start_value = mega_cast(value_from_code); }
-
-        ~basic_variable() = default;
-    private:
-        std::variant<int, double, std::string> start_value;
-        std::vector<std::string> changes;
-
-    protected:
-        [[nodiscard]] static short get_type(const std::string &s) {
-            if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
-            bool has_dot = false;
-            if (s == ".") return UNKNOWN;
-            for (auto chr: s) {
-                if (chr == '.') {
-                    if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
-                    else has_dot = true;
-                }
-                else if ((chr > '9' || chr < '0') && chr != ' ') return UNKNOWN;
-            }
-            return (has_dot) ? DOUBLE : INT;
-        }
-
-        [[nodiscard]] static inline std::variant<int, double, std::string> mega_cast(const std::string &s) {
-            switch (get_type(s)) {
-                case UNKNOWN: throw std::runtime_error("Function mega_cast() : got unknown type!");
-                case INT: return std::stoi(s);
-                case DOUBLE: return std::stod(s);
-                default: return s;
-            }
-        }
-    };
-
-    struct non_basic_variable {
-        non_basic_variable() = default;
-
-        explicit non_basic_variable(const std::string &defenition_string, int depth = 0) {
-            std::string opening_brackets = "([";
-            std::string closing_brackets = ")]";
-            std::map<char, char> pairs = {{'(', ')'}, {'[', ']'}};
-            std::vector<char> brackets;
-            size_t opening_index;
-
-            for (size_t i = 0; i < defenition_string.size(); ++i) {
-                if (brackets.empty() && closing_brackets.find(defenition_string[i]) != -1)
-                    throw std::runtime_error("Function non_basic_variable : unknown type found!");
-
-                if (opening_brackets.find(defenition_string[i]) != -1) {
-                    brackets.push_back(defenition_string[i]);
-                    opening_index = i;
-                }
-
-                if (closing_brackets.find(defenition_string[i]) != -1) {
-                    if (pairs[brackets.back()] != defenition_string[i])
-                        throw std::runtime_error("Function non_basic_variable : unknown type found!");
-
-                    brackets.pop_back();
-                    children.emplace_back(new non_basic_variable(defenition_string.substr(opening_index + 1, i - opening_index - 1), depth + 1));
-                    opening_index = i + 1;
-                }
-            }
-            std::cout << depth << '\n';
-        }
-
-        non_basic_variable(int _index, const basic_variable& _value) : index(_index), value(_value) {}
-
-        ~non_basic_variable() = default;
-    private:
-        std::vector<non_basic_variable *> children;
-        basic_variable value;
-        int index;
-    };
 
     struct node_t {
         std::string name;
