@@ -4,7 +4,7 @@ c = int(input())
 print(c)
 
 
-if c == "GOIIIIIIIIIDAAAAAAAAAA":
+if c == "a":
     if a == 3:
         print(c)
     elif a == 2:
@@ -16,6 +16,6 @@ if c == "GOIIIIIIIIIDAAAAAAAAAA":
         print(a)
 else:
     if a == 8:
-        print("GOIDA!")
+        print("b")
     else:
         print("aboba")

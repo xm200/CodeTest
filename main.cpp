@@ -1,6 +1,7 @@
-#include <iostream>
 #include "interval.h"
 #include "CFGparser.h"
+#include "ASTExperiment.h"
+#include <iostream>
 
 bool m = true;
 
@@ -80,8 +81,8 @@ int main(int argc, char *argv[]) {
 
     custom::custom_type a(buf);
     custom::custom_type b(buf2);
-    a = a + b;
-    a += b;
+    // a = a + b;
+    // a += b;
 
     std::cout << std::get<interval::interval<typeInt>>(a.data).print();
     return 0;

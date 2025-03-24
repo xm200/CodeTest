@@ -1,454 +1,13 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "misc-no-recursion"
-//
-// Created by xm200 on 05.03.2025. =uwu=
-//
+#ifndef CFG_H
+#define CFG_H
 
-#ifndef CODE_TEST_CFG_PARSER_H
-#define CODE_TEST_CFG_PARSER_H
 
 #include <fstream>
-#include <sstream>
 #include <utility>
 #include <string>
 #include <vector>
-#include <map>
-#include <any>
 #include <queue>
-#include <variant>
-#include <functional>
 #include <iostream>
-
-namespace custom {
-    template<typename S>
-    struct vec_line {
-        const S *vec = nullptr;
-        std::size_t l = 0, len = 0;
-
-        vec_line() = default;
-
-        [[maybe_unused]] [[nodiscard]] S extract() const {
-            return vec->substr(l, len);
-        }
-
-        [[maybe_unused]] vec_line(vec_line<S> &data) : vec(data.vec), l(data.l), len(data.len) {}
-
-        [[maybe_unused]] vec_line(const S *vec_, std::size_t l_, std::size_t len_) : vec(vec_), l(l_), len(len_) {}
-
-        [[maybe_unused]] explicit vec_line(S data) : vec(&data) {
-            len = data.size();
-        }
-
-        [[maybe_unused]] [[nodiscard]] std::size_t size() const _GLIBCXX_NOEXCEPT { return len; }
-
-        [[maybe_unused]] [[nodiscard]] typename S::iterator begin() _GLIBCXX_NOEXCEPT
-        { return vec->begin() + l; }
-        [[maybe_unused]] [[nodiscard]] typename S::const_iterator begin() const _GLIBCXX_NOEXCEPT
-        {return vec->cbegin() + l; }
-
-        [[maybe_unused]] [[nodiscard]] typename S::iterator end() _GLIBCXX_NOEXCEPT
-        { return vec->begin() + l + len; }
-        [[maybe_unused]] [[nodiscard]] typename S::const_iterator end() const _GLIBCXX_NOEXCEPT
-        {return vec->cbegin() + l + len; }
-
-        [[maybe_unused]] [[nodiscard]] auto &front() _GLIBCXX_NOEXCEPT {
-            return vec->operator[](l);
-        }
-        [[maybe_unused]] [[nodiscard]] auto &front() const _GLIBCXX_NOEXCEPT {
-            return vec->operator[](l);
-        }
-
-        [[maybe_unused]] [[nodiscard]] auto &back() _GLIBCXX_NOEXCEPT {
-            return vec->operator[](l + len - 1);
-        }
-        [[maybe_unused]] [[nodiscard]] auto &back() const _GLIBCXX_NOEXCEPT {
-            return vec->operator[](l + len - 1);
-        }
-
-        [[maybe_unused]] [[nodiscard]] vec_line<S> substr(const std::size_t pos, const std::size_t sz)
-        const _GLIBCXX_NOEXCEPT {
-            return {vec, pos + l, std::min(sz, len - pos - l)};
-        }
-
-        [[maybe_unused]] [[nodiscard]] auto& operator[](std::size_t i) _GLIBCXX_NOEXCEPT {
-#if defined(DEBUG_MODE)
-            if (i >= len) throw std::out_of_range("index out of range");
-#endif
-            return vec->operator[](i + l);
-        }
-        [[nodiscard]] auto& operator[](std::size_t i) const _GLIBCXX_NOEXCEPT {
-#if defined(DEBUG_MODE)
-            if (i >= len) throw std::out_of_range("index out of range");
-#endif
-            return vec->operator[](i + l);
-        }
-    };
-
-    template<typename S>
-    [[maybe_unused]] vec_line<S> vl_substr(const S &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
-        return {&vec, pos, std::min(len, vec.size() - pos)};
-    }
-    template<typename S>
-    [[maybe_unused]] vec_line<S> vl_substr(const vec_line<S> &vec, const std::size_t pos, const std::size_t len) _GLIBCXX_NOEXCEPT {
-        return {vec.vec, pos + vec.l, std::min(len, vec.size() - pos - vec.l)};
-    }
-
-    std::vector<std::string> operations = {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
-
-    using str_type = custom::vec_line<std::string>;
-
-    struct node {
-        node *parent{};
-        node *children[26] = {};
-        node *parent_am{};
-        char name{};
-        std::vector<std::pair<std::string, int>> endings{};
-
-        inline void check(char where) {
-            if (!children[where - 'a']) children[where - 'a'] = new node(where);
-        }
-
-        void add_key(const std::string &s, int idx, int cur = 0) {
-            if (cur == s.size()) {
-                endings.emplace_back(s, idx);
-                return;
-            }
-            check(s[cur]);
-            add_key(s, cur + 1);
-        }
-
-        void init() {
-            std::queue<node *> q;
-            q.push(this);
-            parent = this;
-            parent_am = this;
-
-            while (!q.empty()) {
-                auto v = q.front();
-                q.pop();
-
-                auto go = v->parent_am;
-                if (go == this) {
-                    v->parent_am = this;
-                }
-                else {
-                    while (!go->children[name - 'a'] && go != go->parent) go = go->parent_am;
-                    v->parent_am = go->children[name - 'a'];
-                }
-                for (auto &x : v->parent_am->endings) v->endings.emplace_back(x);
-                for (auto &x : v->children) q.push(x);
-            }
-        }
-
-        node *detect(char c) {
-            auto go = this;
-            while (!go->children[c - 'a'] && go != go->parent) go = go->parent_am;
-            return (go->children[c - 'a'] == nullptr ? this:go->children[c - 'a']);
-        }
-
-        [[nodiscard]] std::pair<std::pair<size_t , size_t>, size_t> go(const str_type &other) {
-            auto _root  = this;
-            std::pair<size_t, size_t> met[12];
-            for (auto & i : met) i = {-1, -1};
-            int brackets = 0;
-            if (other.front()== '(' && other.back() == ')') return go(other.substr(1, other.size() - 2));
-            auto lamda = [](const char c) { return 'a' <= c && c <= 'z'; };
-
-            for (size_t idx = 0; idx < other.size(); ++idx) {
-                _root = _root->detect(other[idx]);
-
-                for (auto & ending : _root->endings) {
-                    if (other[idx] == '(') ++brackets;
-                    if (other[idx] == ')') --brackets;
-
-                    auto buf = ending.second - ending.first.size();
-
-                    if (brackets > 0) continue;
-                    if ((buf > 0 && lamda(other[buf])) || (idx + 1 < other.size() && lamda(other[idx + 1]))) continue;
-                    met[ending.second].first = buf + 1;
-                    met[ending.second].second = idx + 1;
-                }
-            }
-            for (auto x = 0; x < 12; ++x) if (met[x].first != -1 && met[x].second != -1) return {met[x], x};
-            return {{-1, -1}, static_cast<size_t>(-1)};
-        }
-
-        explicit node(char n) : name(n) {};
-        node() = default;
-        ~node() = default;
-    } root;
-
-
-    [[nodiscard]] str_type erase_spaces(const str_type &other) {
-        size_t l = 0, r = other.size();
-        while (other[l] == ' ' && l < other.size()) ++l;
-        if (l == other.size()) throw std::logic_error("empty string if function erase_spaces");
-        while (other[r - 1] == ' ' && r > 0) --r;
-        return other.substr(l, other.size() - r);
-    }
-
-    struct custom_type {
-        using variables = std::map<std::string, custom_type*>;
-
-        using inner_type = std::variant<
-                interval::interval<typeInt>,
-                interval::interval<typeFloat>,
-                interval::interval<std::string>,
-                std::vector<custom_type*>>;
-
-
-        enum types {
-            INT, FLOAT, STRING, VECTOR, UNKNOWN
-        };
-
-        short type = UNKNOWN;
-        inner_type data;
-        std::string name = "undefined name";
-
-        custom_type() = default;
-        explicit custom_type(const inner_type& d) : data(d), type(get_type(d)) {}
-
-        ~custom_type() = default;
-
-#define subst(fun, a, b) \
-    switch (get_type(a)) { \
-        case INT: return fun<typeInt>(a, b); \
-        case FLOAT: return fun<typeFloat>(a, b); \
-        case STRING: return fun<std::string>(a, b); \
-        default: throw std::runtime_error("unknown type"); \
-    }
-
-#define subst_digit_only(fun, a, b)  \
-    switch (get_type(a)) { \
-        case INT: return fun<typeInt>(a, b); \
-        case FLOAT: return fun<typeFloat>(a, b); \
-        default: throw std::runtime_error("unknown type"); \
-    }
-
-        [[nodiscard]] inner_type friend operator<(const inner_type &a, const inner_type &b) { subst(less, a, b) }
-        [[nodiscard]] inner_type friend operator>(const inner_type &a, const inner_type &b) { subst(more, a, b) }
-        [[nodiscard]] inner_type friend operator<=(const inner_type &a, const inner_type &b) { subst(less_equal, a, b) }
-        [[nodiscard]] inner_type friend operator>=(const inner_type &a, const inner_type &b) { subst(more_equal, a, b) }
-        [[nodiscard]] inner_type friend operator==(const inner_type &a, const inner_type &b) { subst(equal, a, b) }
-        [[nodiscard]] inner_type friend operator!=(const inner_type &a, const inner_type &b) { subst(not_equal, a, b) }
-        [[nodiscard]] inner_type friend operator+(const inner_type &a, const inner_type &b) { subst_digit_only(add, a, b) }
-        [[nodiscard]] inner_type friend operator-(const inner_type &a, const inner_type &b) { subst_digit_only(subtract, a, b) }
-        [[nodiscard]] inner_type friend operator*(const inner_type &a, const inner_type &b) { subst_digit_only(multiply, a, b) }
-        [[nodiscard]] inner_type friend operator/(const inner_type &a, const inner_type &b) { subst_digit_only(divide, a, b) }
-        [[nodiscard]] inner_type friend operator%(const inner_type &a, const inner_type &b) { return mod(a, b); }
-
-#undef subst_digit_only
-#undef subst
-
-        custom_type& operator=(const inner_type &a) {
-            data = a;
-            type = get_type(a);
-            return *this;
-        }
-
-        custom_type& operator=(const custom_type &a) = default;
-
-        friend inner_type & operator+=(inner_type &a, const inner_type &b) { checkType(a, b, "+="); a = (a + b); return a; }
-        friend inner_type & operator-=(inner_type &a, const inner_type &b) { checkType(a, b, "-="); a = (a - b); return a; }
-        friend inner_type & operator*=(inner_type &a, const inner_type &b) { checkType(a, b, "*="); a = (a * b); return a; }
-        friend inner_type & operator/=(inner_type &a, const inner_type &b) { checkType(a, b, "/="); a = (a / b); return a; }
-        friend inner_type & operator%=(inner_type &a, const inner_type &b) { checkType(a, b, "%="); a = (a % b); return a; }
-
-        [[nodiscard]] inner_type extract(const str_type &other) {
-            for(int i = 0; i < operations.size(); ++i) root.add_key(operations[i], i);
-            root.init();
-//            return _extract(other); ///todo: make wrapper on extractor
-        }
-
-
-        [[nodiscard]] static short get_type(const std::string &s) {
-            if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
-            bool has_dot = false;
-            if (s.size() == 1 && s.front() == '.') return UNKNOWN;
-            for (auto chr: s) {
-                if (chr == '.') {
-                    if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
-                    else has_dot = true;
-                }
-                else if (chr > '9' || chr < '0') return UNKNOWN;
-            }
-            return (has_dot) ? FLOAT : INT;
-        }
-
-        [[nodiscard]] static inline inner_type mega_cast(const str_type &s, variables &v) {
-            auto _s = erase_spaces(s).extract();
-            switch (get_type(_s)) {
-                case UNKNOWN: {
-                    return v[_s]->data;
-                }
-
-                case INT: {
-                    interval::interval<typeInt> buf;
-                    buf.add_point(std::stoll(_s));
-                    return buf;
-                }
-                case FLOAT: {
-                    interval::interval<typeFloat> buf;
-                    buf.add_point(std::stod(_s));
-                    return buf;
-                }
-                default: {
-                    interval::interval<std::string> buf;
-                    buf.add_point(_s);
-                    return buf;
-                }
-            }
-        }
-
-        [[nodiscard]] static std::vector<std::pair<std::string, inner_type>> push(inner_type &a, inner_type &b, short op_number, const std::string &name) {
-            switch (op_number) {
-                case 0: return {{name, a *= b}}; // a == 3 and b == 4 -> [["a", 3], ["b", 4]]
-                case 2: return {{name, a == b}};
-                case 3: return {{name, a != b}};
-                case 4: return {{name, a > b}};
-                case 5: return {{name, a < b}};
-                case 6: return {{name, a >= b}};
-                case 7: return {{name, a <= b}};
-                case 8: return {{name, a + b}};
-                case 9: return {{name, a - b}};
-                case 10: return {{name, a / b}};
-                case 11: return {{name, a % b}};
-                default:
-                    break;
-            }
-        }
-
-        [[nodiscard]] variables _extract(const str_type &other, variables &v) { // if (a == 2 || b == 3) && c + 2 == 5
-            auto split_idx = root.go(other);
-            if (split_idx.second == -1) { // a == | 2
-
-            } else if (split_idx.second == 1) {
-                ///todo: add or processing
-            }
-            auto l1 = split_idx.first.second;
-            auto r1 = split_idx.first.second;
-            auto ignor = _extract(other.substr(0, l1));
-            auto ignor2 = _extract(other.substr(l1, r1));
-
-        }
-
-    protected:
-
-        template<typename T>
-        [[nodiscard]] static inner_type less_in(
-                const std::function<void(interval::interval<T> &it, const inner_type &a)> &it,
-                const inner_type &a,
-                const inner_type &b,
-                const std::string &n) {
-            checkType(a, b, n);
-            interval::interval<T> buf;
-            it(buf, a);
-            return buf * std::get<interval::interval<T>>(b);
-        }
-
-        void checkType(const custom_type &a, const std::string &name_op) const {
-            if (this->type != a.type)
-                throw std::logic_error("Function operator " + name_op + ", error: could not compare different types!");
-        }
-
-        static void checkType(const inner_type &a, const inner_type &b, const std::string &name_op) {
-            if (get_type(b) != get_type(a))
-                throw std::logic_error("Function operator " + name_op + ", error: could not compare different types!");
-        }
-
-        template<typename type>
-        [[nodiscard]] static inline bool can_cast(const inner_type &d) {
-            return std::get_if<type>(&d) != nullptr;
-        }
-
-        [[nodiscard]] static short get_type(const inner_type &d) {
-            if (can_cast<interval::interval<typeInt>>(d)) return types::INT;
-            if (can_cast<interval::interval<typeFloat>>(d)) return types::FLOAT;
-            if (can_cast<interval::interval<std::string>>(d)) return types::STRING;
-            if (can_cast<std::vector<custom_type*>>(d)) return types::VECTOR;
-            throw std::runtime_error("Function: can_cast(), error: UNKNOWN TYPE");
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type less(const inner_type &a, const inner_type &b) {
-            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
-                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a).any().value());
-            }, a, b, "<");
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type more(const inner_type &a, const inner_type &b) {
-            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
-                buf.add_interval(std::get<interval::interval<T>>(a).any().value(),interval::maximal<T>());
-            }, a, b, ">");
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type less_equal(const inner_type &a, const inner_type &b) {
-            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
-                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a).any().value());
-                buf.add_point(std::get<interval::interval<T>>(a).any().value());
-            }, a, b, "<=");
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type more_equal(const inner_type &a, const inner_type &b) {
-            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
-                buf.add_interval(std::get<interval::interval<T>>(a).any().value(), interval::maximal<T>());
-                buf.add_point(std::get<interval::interval<T>>(a).any().value());
-            }, a, b, ">=");
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type equal(const inner_type &a, const inner_type &b) {
-            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
-                buf.add_point(std::get<interval::interval<T>>(a).any().value());
-            }, a, b, "==");
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type not_equal(const inner_type &a, const inner_type &b) {
-            return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
-                buf.add_interval(std::get<interval::interval<T>>(a).any().value(), interval::maximal<T>());
-                buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a).any().value());
-            }, a, b, "!=");
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type add(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "+");
-            return std::get<interval::interval<T>>(a)
-                   + std::get<interval::interval<T>>(b).any().value();
-        }
-
-        template<typename type>
-        [[nodiscard]] static inner_type subtract(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "-");
-            return std::get<interval::interval<type>>(a)
-                   - std::get<interval::interval<type>>(b).any().value();
-        }
-
-        template<typename type>
-        [[nodiscard]] static inner_type multiply(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "*");
-            return std::get<interval::interval<type>>(a)
-                   * std::get<interval::interval<type>>(b).any().value();
-        }
-
-        template<typename type>
-        [[nodiscard]] static  inner_type divide(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "/");
-            return std::get<interval::interval<type>>(a)
-                   / std::get<interval::interval<type>>(b).any().value();
-        }
-
-        [[nodiscard]] static inner_type mod(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "%");
-            return std::get<interval::interval<typeInt>>(a)
-                   % std::get<interval::interval<typeInt>>(b).any().value();
-        }
-    };
-}
 
 
 
@@ -484,10 +43,16 @@ namespace parse {
 #endif
 
             if (way.empty()) path = way;
+                // ReSharper disable once CppDFAUnreachableCode
+                // ReSharper disable once CppRedundantBooleanExpressionArgument
             else if constexpr (get_os() == LINUX || get_os() == MACOS) path = way + '/';
+                // ReSharper disable once CppDFAUnreachableCode
             else path = way + '\\';
 
+                // ReSharper disable once CppDFAUnreachableCode
+                // ReSharper disable once CppRedundantBooleanExpressionArgument
             if constexpr (get_os() == LINUX || get_os() == MACOS) path += "cache/";
+                // ReSharper disable once CppDFAUnreachableCode
             else path += "cache\\";
             system(("mkdir " + path).c_str());
             inited = true;
@@ -496,7 +61,10 @@ namespace parse {
         ~cache_t() {
             if (!inited) return;
 #if !defined(DO_NOT_REMOVE_CACHE)
+                // ReSharper disable once CppDFAUnreachableCode
+                // ReSharper disable once CppRedundantBooleanExpressionArgument
             if constexpr (get_os() == LINUX || get_os() == MACOS) system(("rm -rf " + path).c_str());
+                // ReSharper disable once CppDFAUnreachableCode
             else system(("rd /s /q " + path).c_str()); // Remove dir
 #endif
         }
@@ -566,7 +134,7 @@ namespace parse {
             else parse_bfs();
         }
 
-        void tree() {
+        void tree() const {
             std::string s;
             tree(root, s);
             std::cout << std::flush;
@@ -583,7 +151,7 @@ namespace parse {
 
         };
 
-        void parse_bfs() {
+        void parse_bfs() const noexcept {
             std::queue<node_t *> q;
             q.push(root);
 
@@ -674,7 +242,7 @@ namespace parse {
             IF, ELIF, ELSE, FOR, WHILE, ANOTHER
         };
 
-        static void tree(node_t *_root, std::string &move) {
+        static void tree(node_t *_root, const std::string &move) {
             std::cout << move << _root->name + '\n';
             auto move_new = move;
             if (!move_new.empty()) {
@@ -698,6 +266,6 @@ namespace parse {
         }
     };
 }
-#endif //CODE_TEST_CFG_PARSER_H
+#endif //CFG_H
 
 #pragma clang diagnostic pop

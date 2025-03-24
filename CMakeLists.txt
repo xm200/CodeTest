@@ -9,6 +9,6 @@ add_compile_definitions(typeInt=long\ long)
 add_compile_definitions(typeFloat=long\ double)
 #add_compile_definitions(DO_NOT_REMOVE_CACHE)
 
-add_executable(CodeTest main.cpp interval.h)
+add_executable(CodeTest main.cpp interval.h ASTExperiment.h CFGparser.h)
 
 add_executable(test_lib_interval interval.cpp interval.h)
