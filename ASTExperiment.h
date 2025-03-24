@@ -10,7 +10,6 @@
 #include <utility>
 #include <string>
 #include <vector>
-#include <map>
 #include <queue>
 #include <variant>
 #include <functional>
@@ -212,13 +211,13 @@ enable_string(name, __VA_ARGS__)
 
 
     struct custom_type {
-        using variables = std::map<std::string, custom_type*>;
-
         using inner_type = std::variant<
                 interval::interval<typeInt>,
                 interval::interval<typeFloat>,
                 interval::interval<std::string>,
                 std::vector<custom_type*>>;
+
+        using variables = std::vector<std::pair<str_type, inner_type>>;
 
         enum types {
             INT, FLOAT, STRING, VECTOR, UNKNOWN
@@ -226,7 +225,7 @@ enable_string(name, __VA_ARGS__)
 
         short type = UNKNOWN;
         inner_type data;
-        std::string name = "undefined name";
+        str_type name{};
 
         custom_type() = default;
         explicit custom_type(const inner_type& d) : type(get_type(d)), data(d) {}
@@ -299,64 +298,91 @@ enable_string(name, __VA_ARGS__)
             return (has_dot) ? FLOAT : INT;
         }
 
-        [[nodiscard]] static inner_type dereference_cast(const str_type &s, variables &v) {
+        [[nodiscard]] static int search_name(const variables &v, const str_type &s) {
+            for (int i = 0; i < v.size(); ++i)
+                if (v[i].first.extract() == s.extract()) return i;
+            return -1;
+        }
+
+        [[nodiscard]] static std::pair<str_type, inner_type> dereference_cast(const str_type &s, const variables &v) {
             switch (const auto _s = erase_spaces(s).extract(); get_type(_s)) {
                 case UNKNOWN: {
-                    return v[_s]->data;
+                    return v[search_name(v, s)];
                 }
                 case INT: {
                     interval::interval<typeInt> buf;
                     buf.add_point(std::stoll(_s));
-                    return buf;
+                    str_type data;
+                    return {data, buf};
                 }
                 case FLOAT: {
                     interval::interval<typeFloat> buf;
                     buf.add_point(std::stod(_s));
-                    return buf;
+                    str_type data;
+                    return {data, buf};
                 }
                 default: {
                     interval::interval<std::string> buf;
                     buf.add_point(_s);
-                    return buf;
+                    str_type data;
+                    return {data, buf};
                 }
             }
         }
 
-        [[nodiscard]] static std::vector<std::pair<std::string, inner_type>> push(
-                const inner_type &a, const inner_type &b, const short op_number, const std::string &name) {
+        [[nodiscard]] static std::vector<std::pair<str_type, inner_type>> merge(
+            const std::vector<std::pair<str_type, inner_type>> &a,
+            const std::vector<std::pair<str_type, inner_type>> &b,
+            const std::vector<std::pair<str_type, inner_type>> &v,
+            const str_type &oper) {
+
+            short id = -1;
+            for (int i = 0; i < operations.size(); ++i) if (operations[i] == oper.extract()) {id = i; break;}
+            if (id == -1) throw std::runtime_error("push() called with invalid id!");
+
+            std::vector<std::pair<str_type, inner_type>> res(v.size());
+            ///todo: debug it tomorrow, because it would not work now
+            for (int i = 0; i < v.size(); ++i) {
+                const auto buf = merge(a[i].second, b[i].second, id, v[i].first);
+                res[i].first = v[i].first;
+                res[i].second = v[i].second * buf.second;
+            }
+        }
+
+        [[nodiscard]] static std::pair<str_type, inner_type> merge(
+                const inner_type &a, const inner_type &b, const short op_number, const str_type &name) {
             switch (op_number) {
-                case 0: return {{name, a * b}}; // a == 3 and b == 4 -> [["a", 3], ["b", 4]]
-                case 2: return {{name, a == b}};
-                case 3: return {{name, a != b}};
-                case 4: return {{name, a > b}};
-                case 5: return {{name, a < b}};
-                case 6: return {{name, a >= b}};
-                case 7: return {{name, a <= b}};
-                case 8: return {{name, a + b}};
-                case 9: return {{name, a - b}};
-                case 10: return {{name, a / b}};
-                case 11: return {{name, a % b}};
+                case 0: return {name, a * b}; // a == 3 and b == 4 -> [["a", 3], ["b", 4]]
+                case 2: return {name, a == b};
+                case 3: return {name, a != b};
+                case 4: return {name, a > b};
+                case 5: return {name, a < b};
+                case 6: return {name, a >= b};
+                case 7: return {name, a <= b};
+                case 8: return {name, a + b};
+                case 9: return {name, a - b};
+                case 10: return {name, a / b};
+                case 11: return {name, a % b};
                 default:
-                    throw std::runtime_error("function did not realised");
-                    //todo push
+                    throw std::logic_error("Function push() : Unresolved data"); // there could not be VARIABLE. Only intervals. The first arg must be resolved as interval before calling
             }
         }
 
         [[nodiscard]] variables static _extract(const str_type &other, variables &v) { // if (a == 2 || b == 3) && c + 2 == 5
-            auto split_idx = root.go(other);
+            const auto split_idx = root.go(other);
             if (split_idx.second == -1) { // a == | 2
-                throw std::runtime_error("function did not realised");
-                //todo: burn this function
-            } else if (split_idx.second == 1) {
+                return {dereference_cast(other, v)};
+            } if (split_idx.second == 1) {
                 ///todo: add or processing
             }
-            // auto l1 = split_idx.first.first;
-            // auto r1 = split_idx.first.second;
-            // auto ignat or = _extract(other.substr(0, l1), v);
-            // auto ignat or2 = _extract(other.substr(r1), v);
-            //todo: burn this function
-            throw std::runtime_error("function did not realised");
+            const auto l1 = split_idx.first.first;
+            const auto r1 = split_idx.first.second;
+            auto p1 = _extract(other.substr(0, l1), v);
+            auto p2 = _extract(other.substr(r1), v);
 
+            const auto buf = other.substr(l1, r1 - l1 + 1);
+
+            return merge(p1, p2, buf);
         }
 
     protected:
