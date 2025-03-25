@@ -75,15 +75,7 @@ int main(int argc, char *argv[]) {
     parse::parser p(parse::read_file(path), m);
     p.parse();
 
-    interval::interval<typeInt> buf1, buf2;
-    buf1.add_interval(interval::minimal<typeInt>(), 1);
-    buf2.add_interval(1,interval::maximal<typeInt>());
-    std::string s1 = "a", s2 = "b";
-
-    auto t1 = new custom::custom_type(buf1), t2 = new custom::custom_type(buf2);
-    custom::str_type s("c");
-    const std::vector<std::pair<std::string, custom::custom_type*>> v = {{s1, t1}, {s2, t2}};
-    std::cout << custom::custom_type::search_name(v, s);
+    ast_node test("a  ==  5");
 
     return 0;
 }

@@ -7,6 +7,7 @@
 // ReSharper disable CppUseStructuredBinding
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "misc-no-recursion"
+#include <any>
 #include <utility>
 #include <string>
 #include <vector>
@@ -113,7 +114,7 @@ enable_string(name, __VA_ARGS__)
 
 
 
-    std::vector<std::string> inline operations =
+    const std::vector<std::string> operations =
         {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
 
     using str_type = vec_line<std::string>;
@@ -171,7 +172,7 @@ enable_string(name, __VA_ARGS__)
             std::pair<size_t, size_t> met[12];
             for (auto & i : met) i = {-1, -1};
             int brackets = 0;
-            if (other.front()== '(' && other.back() == ')') return go(other.substr(1, other.size() - 2));
+            if (other.front()== '(' && other.back() == ')') return go(other.substr(1, other.size() - 2)); // a == 3) && (b == 4
             auto fun = [](const char c) { return 'a' <= c && c <= 'z'; };
 
             for (size_t idx = 0; idx < other.size(); ++idx) {
@@ -284,73 +285,51 @@ enable_string(name, __VA_ARGS__)
         }
 
 
-        [[nodiscard]] static short get_type(const std::string &s) {
-            if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
-            bool has_dot = false;
-            if (s.size() == 1 && s.front() == '.') return UNKNOWN;
-            for (const auto chr: s) {
-                if (chr == '.') {
-                    if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
-                    has_dot = true;
-                }
-                else if (chr > '9' || chr < '0') return UNKNOWN;
-            }
-            return (has_dot) ? FLOAT : INT;
-        }
-
         [[nodiscard]] static int search_name(const variables &v, const str_type &s) {
             for (int i = 0; i < v.size(); ++i)
                 if (v[i].first.extract() == s.extract()) return i;
             return -1;
         }
 
-        [[nodiscard]] static std::pair<str_type, inner_type> dereference_cast(const str_type &s, const variables &v) {
-            switch (const auto _s = erase_spaces(s).extract(); get_type(_s)) {
-                case UNKNOWN: {
-                    return v[search_name(v, s)];
-                }
-                case INT: {
-                    interval::interval<typeInt> buf;
-                    buf.add_point(std::stoll(_s));
-                    str_type data;
-                    return {data, buf};
-                }
-                case FLOAT: {
-                    interval::interval<typeFloat> buf;
-                    buf.add_point(std::stod(_s));
-                    str_type data;
-                    return {data, buf};
-                }
-                default: {
-                    interval::interval<std::string> buf;
-                    buf.add_point(_s);
-                    str_type data;
-                    return {data, buf};
-                }
-            }
-        }
+        // [[nodiscard]] static std::pair<str_type, inner_type> dereference_cast(const str_type &s, const variables &v) {
+        //     switch (const auto _s = erase_spaces(s).extract(); get_type(_s)) {
+        //         case UNKNOWN: {
+        //             return v[search_name(v, s)];
+        //         }
+        //         case INT: {
+        //             interval::interval<typeInt> buf;
+        //             buf.add_point(std::stoll(_s));
+        //             str_type data;
+        //             return {data, buf};
+        //         }
+        //         case FLOAT: {
+        //             interval::interval<typeFloat> buf;
+        //             buf.add_point(std::stod(_s));
+        //             str_type data;
+        //             return {data, buf};
+        //         }
+        //         default: {
+        //             interval::interval<std::string> buf;
+        //             buf.add_point(_s);
+        //             str_type data;
+        //             return {data, buf};
+        //         }
+        //     }
+        // }
 
-        [[nodiscard]] static std::vector<std::pair<str_type, inner_type>> merge(
-            const std::vector<std::pair<str_type, inner_type>> &a,
-            const std::vector<std::pair<str_type, inner_type>> &b,
-            const std::vector<std::pair<str_type, inner_type>> &v,
-            const str_type &oper) {
-
-            short id = -1;
-            for (int i = 0; i < operations.size(); ++i) if (operations[i] == oper.extract()) {id = i; break;}
+        [[nodiscard]] static variables merge(const variables &a, const variables &b, const variables &v, const str_type &oper) {
+            std::size_t id = -1;
+            for (auto i = 0; i < operations.size(); ++i) if (operations[i] == oper.extract()) {id = i; break;}
             if (id == -1) throw std::runtime_error("push() called with invalid id!");
 
-            std::vector<std::pair<str_type, inner_type>> res(v.size());
+            auto res = v;
             ///todo: debug it tomorrow, because it would not work now
-            for (int i = 0; i < v.size(); ++i) {
-                const auto buf = merge(a[i].second, b[i].second, id, v[i].first);
-                res[i].first = v[i].first;
-                res[i].second = v[i].second * buf.second;
-            }
+
+            return res;
         }
 
         [[nodiscard]] static std::pair<str_type, inner_type> merge(
-                const inner_type &a, const inner_type &b, const short op_number, const str_type &name) {
+                const inner_type &a, const inner_type &b, const std::size_t op_number, const str_type &name) {
             switch (op_number) {
                 case 0: return {name, a * b}; // a == 3 and b == 4 -> [["a", 3], ["b", 4]]
                 case 2: return {name, a == b};
@@ -371,18 +350,19 @@ enable_string(name, __VA_ARGS__)
         [[nodiscard]] variables static _extract(const str_type &other, variables &v) { // if (a == 2 || b == 3) && c + 2 == 5
             const auto split_idx = root.go(other);
             if (split_idx.second == -1) { // a == | 2
-                return {dereference_cast(other, v)};
+                return {};
             } if (split_idx.second == 1) {
                 ///todo: add or processing
             }
             const auto l1 = split_idx.first.first;
             const auto r1 = split_idx.first.second;
-            auto p1 = _extract(other.substr(0, l1), v);
-            auto p2 = _extract(other.substr(r1), v);
+            const auto p1 = _extract(other.substr(0, l1), v);
+            const auto p2 = _extract(other.substr(r1), v);
 
             const auto buf = other.substr(l1, r1 - l1 + 1);
-
-            return merge(p1, p2, buf);
+            // return merge(p1, p2, v, buf); - a < 2 // a < 2 == b > 3
+            // return merge(p1, p2, v, buf); - [(a < 2) && (b > 3) && (c != 0)]
+            return {};
         }
 
     protected:
@@ -511,4 +491,76 @@ enable_string(name, __VA_ARGS__)
 #undef enable_string
 #undef close_cession
 }
+
+struct ast_node {
+    explicit ast_node(const std::string &what) { build(what); }
+
+    ast_node() = default;
+    ~ast_node() = default;
+
+    void build(const std::string &str) {
+        int opened = 0;
+
+        if (str.front() == '(' && str.back() == ')') {
+            ++opened;
+            for (int i = 1; i < str.size() - 1; ++i) {
+                if (str[i] == '(') ++opened;
+                if (str[i] == ')') --opened;
+                if (!opened && i < str.size()) goto filtered;
+            }
+            build(str.substr(1, str.size() - 2));
+            return;
+        }
+
+        filtered:
+        for (int i = 0; i < str.size(); ++i) {
+            if (str[i] == '(') ++opened;
+            if (str[i] == ')') --opened;
+            if (opened) continue;
+            for (auto &x : custom::operations) {
+                if (str.substr(i, x.size()) != x) continue;
+                left = new ast_node(erase_spaces(str.substr(0, i)));
+                oper = str.substr(i, x.size());
+                right = new ast_node(erase_spaces(str.substr(i + x.size() + 1)));
+            }
+        }
+    }
+
+protected:
+    ast_node *left = nullptr, *right = nullptr;
+    std::string oper;
+
+    using inner_type = std::variant<
+        interval::interval<typeInt>,
+        interval::interval<typeFloat>,
+        interval::interval<std::string>>;
+
+    using variables = std::vector<std::pair<std::string, inner_type>>;
+
+    enum types {INT, FLOAT, STRING, UNKNOWN};
+
+    variables vars;
+
+    [[nodiscard]] std::string static erase_spaces(const std::string &s) {
+        size_t l = 0, r = s.size() - 1;
+        while (s[l] == ' ') ++l;
+        while (s[r] == ' ') --r;
+        return s.substr(l, r - l + 1);
+    }
+
+    [[nodiscard]] static short get_type(const std::string &s) {
+        if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
+        bool has_dot = false;
+        if (s.size() == 1 && s.front() == '.') return UNKNOWN;
+        for (const auto chr: s) {
+            if (chr == '.') {
+                if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
+                has_dot = true;
+            }
+            else if (chr > '9' || chr < '0') return UNKNOWN;
+        }
+        return (has_dot) ? FLOAT : INT;
+    }
+};
+
 #endif
