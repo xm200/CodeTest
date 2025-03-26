@@ -15,6 +15,26 @@
 #include <variant>
 #include <functional>
 
+#include "ASTExperiment.h"
+#include "ASTExperiment.h"
+
+
+enum types {INT, FLOAT, STRING, UNKNOWN};
+enum buffer_types {VAR, VEC_VAR};
+
+using inner_type = std::variant<
+        interval::interval<typeInt>,
+        interval::interval<typeFloat>,
+        interval::interval<std::string>>;
+
+using variable = std::pair<std::string, inner_type>;
+
+using variables = std::vector<variable>;
+
+const std::vector<std::string> operations =
+        {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+
+
 namespace custom {
 #define init_cession(a, ...) \
 template<typename> \
@@ -112,10 +132,6 @@ enable_string(name, __VA_ARGS__)
         return {vec.vec, pos + vec.l, std::min(len, vec.size() - pos - vec.l)};
     }
 
-
-
-    const std::vector<std::string> operations =
-        {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
 
     using str_type = vec_line<std::string>;
 
@@ -395,10 +411,10 @@ enable_string(name, __VA_ARGS__)
         }
 
         [[nodiscard]] static short get_type(const inner_type &d) {
-            if (can_cast<interval::interval<typeInt>>(d)) return types::INT;
-            if (can_cast<interval::interval<typeFloat>>(d)) return types::FLOAT;
-            if (can_cast<interval::interval<std::string>>(d)) return types::STRING;
-            if (can_cast<std::vector<custom_type*>>(d)) return types::VECTOR;
+            if (can_cast<interval::interval<typeInt>>(d)) return INT;
+            if (can_cast<interval::interval<typeFloat>>(d)) return FLOAT;
+            if (can_cast<interval::interval<std::string>>(d)) return STRING;
+            if (can_cast<std::vector<custom_type*>>(d)) return VECTOR;
             throw std::runtime_error("Function: can_cast(), error: UNKNOWN TYPE");
         }
 
@@ -492,7 +508,11 @@ enable_string(name, __VA_ARGS__)
 #undef close_cession
 }
 
+
+
 struct ast_node {
+    variables value;
+
     explicit ast_node(const std::string &what) { build(what); }
 
     ast_node() = default;
@@ -513,11 +533,12 @@ struct ast_node {
         }
 
         filtered:
+        what = str;
         for (int i = 0; i < str.size(); ++i) {
             if (str[i] == '(') ++opened;
             if (str[i] == ')') --opened;
             if (opened) continue;
-            for (auto &x : custom::operations) {
+            for (auto &x : operations) {
                 if (str.substr(i, x.size()) != x) continue;
                 left = new ast_node(erase_spaces(str.substr(0, i)));
                 oper = str.substr(i, x.size());
@@ -528,20 +549,10 @@ struct ast_node {
 
 protected:
     ast_node *left = nullptr, *right = nullptr;
-    std::string oper;
+    std::string oper, what;
+    std::variant<variable, variables> buffer;
 
-    using inner_type = std::variant<
-        interval::interval<typeInt>,
-        interval::interval<typeFloat>,
-        interval::interval<std::string>>;
-
-    using variables = std::vector<std::pair<std::string, inner_type>>;
-
-    enum types {INT, FLOAT, STRING, UNKNOWN};
-
-    variables vars;
-
-    [[nodiscard]] std::string static erase_spaces(const std::string &s) {
+    [[nodiscard]] static std::string erase_spaces(const std::string &s) {
         size_t l = 0, r = s.size() - 1;
         while (s[l] == ' ') ++l;
         while (s[r] == ' ') --r;
@@ -561,6 +572,114 @@ protected:
         }
         return (has_dot) ? FLOAT : INT;
     }
+
+    [[nodiscard]] static int search_name(const variables &v, const std::string &s) {
+        for (int i = 0; i < v.size(); ++i)
+            if (v[i].first == s) return i;
+        return -1;
+    }
+
+    [[nodiscard]] static std::size_t get_op_id(const std::string &op) {
+        for (auto i = 0; i < operations.size(); ++i)
+            if (operations[i] == op) return i;
+        return -1;
+    }
+
+    [[nodiscard]] static short get_buf_type(const std::variant<variable, variables> &v) {
+        if (std::get_if<variable>(&v) != nullptr) return VAR;
+        if (std::get_if<variables>(&v) != nullptr) return VEC_VAR;
+        return UNKNOWN;
+    }
+
+    variable merge(const variable &a, const variable &b) {
+        switch (get_op_id(oper)) {
+            case 0:
+                return {};//a.second * b.second;
+            default:
+                return {};
+        }
+    }
+
+    void merge(const variables &v) {
+        const auto tl = get_buf_type(left->buffer);
+        const auto tr = get_buf_type(right->buffer);
+
+        if (tl == tr && tl == VAR) {
+            variables vec;
+            vec.emplace_back(std::get<variable>(left->buffer));
+            vec.emplace_back(std::get<variable>(right->buffer));
+            buffer = std::move(vec);
+        }
+
+        ///todo: add case, when one is variable and other is variables; add case when both are variables
+
+        if (tl == VEC_VAR) {
+            if (tr == VEC_VAR) {
+                variables vec;
+                for (auto &x : v) {
+                    const auto buf1 = search_name(std::get<variables>(left->buffer), x.first);
+                    const auto buf2 = search_name(std::get<variables>(right->buffer), x.first);
+                    if (buf1 != -1 && buf2 != -1) {
+                        vec.push_back(merge(x, std::get<variables>(left->buffer)[buf1]));
+                        vec.push_back(merge(vec.front(), std::get<variables>(right->buffer)[buf2]));
+                    } else if (buf1 != -1) {
+                        vec.push_back(merge(x, std::get<variables>(left->buffer)[buf1]));
+                    } else if (buf2 != -1) {
+                        vec.push_back(merge(x, std::get<variables>(right->buffer)[buf2]));
+                    }
+                }
+                buffer = std::move(vec);
+            }
+        }
+    }
+
+    void set(const variables &v) {
+        value = v;
+        // Дойти до листьев
+        if (left != nullptr)
+            left->set(v);
+        if (right != nullptr)
+            right->set(v);
+
+        // Сделать их интервалами
+        if (left == nullptr && right == nullptr) {
+            if (const auto buf = search_name(v, what); buf != -1) {
+                buffer = v[buf];
+                return;
+            }
+
+            switch (get_type(what)) {
+                case STRING: {
+                    interval::interval<std::string> buf;
+                    buf.add_point(what);
+                    std::get<variable>(buffer).second = buf;
+                    return;
+                }
+                case FLOAT: {
+                    interval::interval<typeFloat> buf;
+                    buf.add_point(std::stod(what));
+                    std::get<variable>(buffer).second = buf;
+                    return;
+                }
+
+                case INT: {
+                    interval::interval<typeInt> buf;
+                    buf.add_point(std::stoll(what));
+                    std::get<variable>(buffer).second = buf;
+                    return;
+                }
+
+                default:
+                    throw std::runtime_error("Unknown type!");
+            }
+        }
+
+        // Вернуться и начать их объединять
+        if (left != nullptr && right != nullptr) {
+            merge(v);
+        }
+    }
+
 };
 
 #endif
