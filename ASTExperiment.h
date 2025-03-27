@@ -333,6 +333,7 @@ namespace custom {
 
 
 namespace ast {
+    using variables_t = std::vector<std::vector<custom::custom_type>>;
     const std::vector<std::string> inline operations =
         {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
     struct ast_node {
@@ -389,13 +390,26 @@ namespace ast {
 
         }
 
+        [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
+            variables_t out;
+            for (const auto &v : orig) {
+                if (data.has_value()) {
+                    if (data.value().name.empty()) {
+
+                    }
+                    else {
+
+                    }
+                }
+            }
+        }
+
         void tree() {
             const std::string s;
             tree(this, s);
             std::cout << std::flush;
         }
 
-    private:
         [[nodiscard]] static custom::custom_type dereference_cast (const std::string &s, const short type) {
             custom::custom_type ret;
             switch (type) {
@@ -426,6 +440,7 @@ namespace ast {
             return ret;
         }
 
+    private:
         init_struct_cession(v.data, static void sub_print(custom::custom_type &v))
             enable_all_types(sub_print, v)
             enable_none(sub_print, v)
@@ -439,8 +454,6 @@ namespace ast {
         static void tree(ast_node *_root, const std::string &move) {
             if (_root->data != std::nullopt) {
                 std::cout << move << ' ';
-                // if (_root->data.value().name.empty()) sub_print(_root->data.value().data);
-                // else std::cout << _root->data.value().name;
                 sub_print(_root->data.value());
                 std::cout << '\n';
                 return;
