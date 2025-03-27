@@ -250,13 +250,13 @@ namespace parse {
                     move_new[i] = '.';
             }
             move_new += "|---";
-            for (auto &vertex : _root->children) {
+            for (const auto &vertex : _root->children) {
                 tree(vertex, move_new);
             }
         }
 
         // ANOTHER - operators, types, functions calls and all that can be in the code
-        [[ nodiscard ]] static inline int get_construction_type(const std::string &buf) {
+        [[ nodiscard ]] static int get_construction_type(const std::string &buf) {
             if (buf == "if") return IF;
             if (buf == "elif") return ELIF;
             if (buf == "else" || buf == "else:") return ELSE;
@@ -267,5 +267,3 @@ namespace parse {
     };
 }
 #endif //CFG_H
-
-#pragma clang diagnostic pop

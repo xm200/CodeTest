@@ -582,7 +582,7 @@ namespace interval {
 
             // check empty data
             if (empty()) {
-                out += "*Empty*\n";
+                out += "*Empty*";
                 return out;
             }
 
