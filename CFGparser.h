@@ -144,12 +144,30 @@ namespace parse {
         node_t *root;
         bool graph_mode;
 
-        static void parse_expr(const std::string &buf, node_t &node) { /// todo: think about +=, -=, ..., not only assign
-            auto ss = std::stringstream(buf);
-            std::vector<std::string> part1, part2;
-            std::string word;
-
+        static short get_type(const custom::str_type &buf) {
+            for (int i = 0; i < buf.size(); ++i) {
+                if (buf.substr(i, 4).extract() == "int(" || buf.substr(i, 4).extract() == "int ") return custom::custom_type::types::INT;
+                if (buf.substr(i, 6).extract() == "float(" || buf.substr(i, 6).extract() == "float ") return custom::custom_type::types::FLOAT;
+                if (buf.substr(i, 6).extract() == "input(" || buf.substr(i, 6).extract() == "input ") return custom::custom_type::types::STRING;
+            }
+            return custom::custom_type::extract_type_from_string(buf.extract());
         };
+
+        /*
+         * a = 3
+         * a=3
+         * a= 3
+         */
+
+        static void split(const custom::str_type &buf) {
+            auto idx = 0;
+
+            for (int i = 0; i < buf.size(); ++i)
+                if (buf[i] == '=') {idx = i; break;}
+
+            auto left = buf.substr(0, idx);
+            auto right = buf.substr(idx + 2);
+        }
 
         void parse_bfs() const noexcept {
             std::queue<node_t *> q;
