@@ -1,6 +1,6 @@
 #include "interval.h"
-#include "CFGparser.h"
 #include "ASTExperiment.h"
+#include "CFGparser.h"
 #include <iostream>
 
 bool m = true;
@@ -24,8 +24,7 @@ static int get_attr(const std::string &val) {
     throw std::runtime_error(s);
 }
 
-int main(int argc, char *argv[]) {
-
+int main(const int argc, char *argv[]) {
     if (argc == 1 || (argc == 2 && argv[1] == std::string_view("--help"))) {
         help("arguments are needed");
     }
