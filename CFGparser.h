@@ -140,6 +140,29 @@ namespace parse {
             std::cout << std::flush;
         }
 
+        static void split(const custom::str_type &buf) {
+            std::vector boo = {'+', '-', '/', '*', '='};
+
+            //Найти начало оператора
+            int l = 0;
+            while (std::find(boo.begin(), boo.end(), buf[l]) == boo.end() && l < buf.size())
+                ++l;
+
+            int idx = 0;
+            for (auto i = 0; i < custom::operations.size(); ++i) {
+                if (buf.size() - l >= custom::operations[i].size() && \
+                        (buf.substr(l, custom::operations[i].size()).extract() == custom::operations[i] ||\
+                        buf.substr(l, custom::operations[i].size()).extract() == "=")) {
+                    idx = i;
+                    break;
+                }
+            }
+            // std::cout << l << ' ' << idx;
+            auto left = custom::erase_spaces(buf.substr(0, l));
+            auto right = custom::erase_spaces(buf.substr(l + custom::operations[idx].size()));
+            std::cout << left.extract() << '\n' << right.extract() << '\n';
+        }
+
     protected:
         node_t *root;
         bool graph_mode;
@@ -157,17 +180,11 @@ namespace parse {
          * a = 3
          * a=3
          * a= 3
+         * a==3
+         * a == 3
+         * a== 3
+         * a ==3
          */
-
-        static void split(const custom::str_type &buf) {
-            auto idx = 0;
-
-            for (int i = 0; i < buf.size(); ++i)
-                if (buf[i] == '=') {idx = i; break;}
-
-            auto left = buf.substr(0, idx);
-            auto right = buf.substr(idx + 2);
-        }
 
         void parse_bfs() const noexcept {
             std::queue<node_t *> q;
