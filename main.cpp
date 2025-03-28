@@ -75,8 +75,9 @@ int main(const int argc, char *argv[]) {
     p.parse();
 
     const std::string line = "a > 3 or (a < 4 and b > 5)";
-    custom::str_type a("a=3");
-    parse::parser::split(a);
+    const std::string abc = "a = 3 * 3 + 123456 % 12345";
+    const custom::str_type a(abc);
+    p.split(a);
     // std::cout << line << std::endl;
     // const custom::str_type x(line);
     // auto node = ast::generate_ast(x);

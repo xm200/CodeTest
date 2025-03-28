@@ -99,7 +99,7 @@ namespace custom {
     };
 
     std::vector<std::string> inline operations =
-        {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+        {"and", "or", "=", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
 
     using str_type = vec_line<std::string>;
 
@@ -161,7 +161,6 @@ namespace custom {
 
         custom_type() = default;
         explicit custom_type(const inner_type& d) : type(get_in_type(d)), data(d) {}
-
         ~custom_type() = default;
 
 
@@ -335,7 +334,7 @@ namespace custom {
 namespace ast {
     using variables_t = std::vector<std::vector<custom::custom_type>>;
     const std::vector<std::string> inline operations =
-        {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+        {"and", "or", "=", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
     struct ast_node {
         ast_node *parent = nullptr;
         ast_node *l = nullptr, *r = nullptr;
