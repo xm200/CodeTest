@@ -158,7 +158,7 @@ namespace custom {
         short type = NONE;
         inner_type data;
         std::string name{};
-        std::optional<std::pair<std::size_t, custom_type>> history{};
+        std::pair<std::size_t, custom_type*> history{};
 
         custom_type() = default;
         explicit custom_type(const inner_type& d) : type(get_in_type(d)), data(d) {}
@@ -424,7 +424,7 @@ namespace ast {
 
                 auto fun = [](custom::custom_type::inner_type &a,
                               const custom::custom_type::inner_type &b,
-                              const short op) {
+                              const std::size_t op) {
                     switch (op) {
                         case PL: a += b; break;
                         case MN: a -= b; break;
@@ -444,11 +444,11 @@ namespace ast {
                                     throw std::logic_error("Wrong using operator " + operations[op]);
                                 if (i.front().name.empty()) {
                                     out.push_back({j});
-                                    fun(out.front().data, i.front().data, op);
+                                    fun(out.back().front().data, i.front().data, op);
                                 }
                                 else {
                                     out.push_back({i});
-                                    fun(out.front().data, j.front().data, op);
+                                    fun(out.back().front().data, j.front().data, op);
                                 }
                                 break;
                             }
