@@ -114,7 +114,7 @@ namespace parse {
     struct node_t {
         std::string name;
         std::vector<node_t *> children{};
-        std::vector<custom::custom_type> variables;
+        std::vector<custom::custom_type> variables{};
         size_t l{}, len{};
         node_t(std::string n, const std::size_t b, const std::size_t e) : name(std::move(n)), l(b), len(e) {}
         node_t() = default;
@@ -141,62 +141,93 @@ namespace parse {
             std::cout << std::flush;
         }
 
-        void split(const custom::str_type &s) const {
-            split(s, this->);
-        }
-
-        void split(const custom::str_type &s, const std::vector<custom::custom_type>& vars) {
-            auto buf = s.extract();
-            std::vector<char> boo = {'+', '-', '/', '*', '='};
-            int idx = 0, l = 0;
-            // Найти начало оператора
-            for (auto i = 0; i < buf.size(); ++i) {
-                if (std::find(boo.begin(), boo.end(), buf[i]) != boo.end()) {
-                    l = i;
-                    break;
-                }
-            }
-
-            // Понять, что это за оператор
-            for (auto i = 0; i < custom::operations.size(); ++i) {
-                if (buf.size() - l >= custom::operations[i].size() && \
-                        (buf.substr(l, custom::operations[i].size()) == custom::operations[i])) {
-                    idx = i;
-                    break;
-                }
-            }
-
-            if (idx == 2) { // Оператор '='
-                for (const auto & var : vars) {
-                    for (const auto & j : var) {
-                        if (j.name == custom::erase_spaces(s.substr(0, l)).extract()) {
-                            ///todo: add something like history saving
+        static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
+            auto ans = orig;
+            std::vector<char> boo = {'>', '<', '=', '!'};
+            for (int i = 0; i < s.size(); ++i) {
+                switch (s[i]) {
+                    case '=': {
+                        if ((i + 1 < s.size() &&
+                                std::find(boo.begin(), boo.end(), s.extract()[i + 1]) != boo.end()) ||
+                            (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
+                        auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
+                        auto buf = root->get_variables(orig);
+                        auto res = buf.front().front();
+                        res.history.push_back({0, res});
+                        for (auto &j : ans) {
+                            if (j.front().name == res.name) { j.front() = res; break; }
                         }
+                        return ans;
                     }
+                    case '+':
+                    case '-':
+                    case '*':
+                    case '/': {
+                        if (s[i + 1] != '=' || (s[i] == '/' && s.substr(i, 3).extract() != "//=")) break;
+                        const auto left = s.substr(0, i);
+                        const auto right = s.substr(i + 2);
+                        const std::string buf = "(" + custom::erase_spaces(right).extract() + ") " + (s[i] == '/' ? "//" : std::string(1, s[i])) + " " + custom::erase_spaces(left).extract();
+                        custom::str_type res(buf);
+                        return translate(res, orig);
+                    }
+                    default: break;
                 }
-                custom::custom_type buf_custom;
-                buf_custom.name = custom::erase_spaces(s.substr(0, l)).extract();
-                // buf.data = ast::ast_node::get_variables();
-                this->root->variables.push_back(buf_custom);
-
-            } else { // Другие операторы
-                for (const auto & var : vars) {
-                    for (const auto & j : var)
-                        if (j.name == custom::erase_spaces(s.substr(0, l)).extract()) goto saving; // Если нашли переменную,
-                                                                                                               // то перейдём к метке,
-                                                                                                               // в которой сохраним изменение
-                }
-                throw std::runtime_error("Function split(), not created variable is accessed!");
-                saving:
-                ///todo: variable operation saving
             }
-            // Тестирования функционала
-#if defined(DEBUG_MODE)
-            const auto left = custom::erase_spaces(s.substr(0, l));
-            const auto right = custom::erase_spaces(s.substr(l + custom::operations[idx].size()));
-            std::cout << left.extract() << '\n' << right.extract() << '\n';
-#endif
+            return {};
         }
+
+
+        // void split(const custom::str_type &s, const std::vector<custom::custom_type>& vars) {
+        //     auto buf = s.extract();
+        //     int idx = 0, l = 0;
+        //     // Найти начало оператора
+        //     for (auto i = 0; i < buf.size(); ++i) {
+        //         if (std::find(boo.begin(), boo.end(), buf[i]) != boo.end()) {
+        //             l = i;
+        //             break;
+        //         }
+        //     }
+        //
+        //     // Понять, что это за оператор
+        //     for (auto i = 0; i < custom::operations.size(); ++i) {
+        //         if (buf.size() - l >= custom::operations[i].size() && \
+        //                 (buf.substr(l, custom::operations[i].size()) == custom::operations[i])) {
+        //             idx = i;
+        //             break;
+        //         }
+        //     }
+        //
+        //     if (idx == 2) { // Оператор '='
+        //         for (const auto & var : vars) {
+        //             for (const auto & j : var) {
+        //                 if (j.name == custom::erase_spaces(s.substr(0, l)).extract()) {
+        //                     ///todo: add something like history saving
+        //                 }
+        //             }
+        //         }
+        //         custom::custom_type buf_custom;
+        //         buf_custom.name = custom::erase_spaces(s.substr(0, l)).extract();
+        //         // buf.data = ast::ast_node::get_variables();
+        //         this->root->variables.push_back(buf_custom);
+        //
+        //     } else { // Другие операторы
+        //         for (const auto & var : vars) {
+        //             for (const auto & j : var)
+        //                 if (j.name == custom::erase_spaces(s.substr(0, l)).extract()) goto saving; // Если нашли переменную,
+        //                                                                                                        // то перейдём к метке,
+        //                                                                                                        // в которой сохраним изменение
+        //         }
+        //         throw std::runtime_error("Function split(), not created variable is accessed!");
+        //         saving:
+        //         ///todo: variable operation saving
+        //     }
+            // Тестирования функционала
+// #if defined(DEBUG_MODE)
+//             const auto left = custom::erase_spaces(s.substr(0, l));
+//             const auto right = custom::erase_spaces(s.substr(l + custom::operations[idx].size()));
+//             std::cout << left.extract() << '\n' << right.extract() << '\n';
+// #endif
+//         }
 
     protected:
         node_t *root;
@@ -222,6 +253,8 @@ namespace parse {
          */
 
         void parse_bfs() const noexcept {
+            ast::variables_t vars;
+            std::vector<custom::custom_type> vars_orig;
             std::queue<node_t *> q;
             q.push(root);
 
@@ -249,7 +282,9 @@ namespace parse {
                             break;
                         }
                         default:
-//                            parse_expr(code->operator[](i), *_root);
+                            auto buf = code->operator[](i);
+                            custom::str_type res(buf);
+                            vars = translate(res, vars);
                             break;
                     }
                 }
@@ -274,6 +309,7 @@ namespace parse {
         }
 
         void parse(node_t *node, const size_t depth = 0) {
+            ast::variables_t vars;
 #if defined(DEBUG_MODE)
             if (node->l >= code->size()) throw
                         std::length_error("Unreachable start limit in function parse()");
@@ -301,8 +337,12 @@ namespace parse {
                         i += child->len;
                         break;
                     }
-                    default:
+                    default: {
+                        auto buf = code->operator[](i);
+                        custom::str_type res(buf);
+                        vars = translate(res, vars);
                         break;
+                    }
                 }
             }
         }
