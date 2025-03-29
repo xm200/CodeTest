@@ -99,7 +99,7 @@ namespace custom {
     };
 
     std::vector<std::string> inline operations =
-        {"and", "or", "=", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+        {"=", "and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
 
     using str_type = vec_line<std::string>;
 
@@ -158,6 +158,7 @@ namespace custom {
         short type = NONE;
         inner_type data;
         std::string name{};
+        std::vector<std::pair<std::size_t, custom_type>> history;
 
         custom_type() = default;
         explicit custom_type(const inner_type& d) : type(get_in_type(d)), data(d) {}
@@ -182,6 +183,8 @@ namespace custom {
                 default: throw std::runtime_error("unknown type"); \
             }
 
+        [[nodiscard]] bool operator<(const custom_type &a) const { return name < a.name; }
+
         [[nodiscard]] inner_type friend operator<(const inner_type &a, const inner_type &b) { subst(less, a, b) }
         [[nodiscard]] inner_type friend operator>(const inner_type &a, const inner_type &b) { subst(more, a, b) }
         [[nodiscard]] inner_type friend operator<=(const inner_type &a, const inner_type &b) { subst(less_equal, a, b) }
@@ -205,11 +208,16 @@ namespace custom {
 
         custom_type& operator=(const custom_type &a) = default;
 
-        friend inner_type & operator+=(inner_type &a, const inner_type &b) { checkType(a, b, "+="); a = (a + b); return a; }
-        friend inner_type & operator-=(inner_type &a, const inner_type &b) { checkType(a, b, "-="); a = (a - b); return a; }
-        friend inner_type & operator*=(inner_type &a, const inner_type &b) { checkType(a, b, "*="); a = (a * b); return a; }
-        friend inner_type & operator/=(inner_type &a, const inner_type &b) { checkType(a, b, "/="); a = (a / b); return a; }
-        friend inner_type & operator%=(inner_type &a, const inner_type &b) { checkType(a, b, "%="); a = (a % b); return a; }
+        friend inner_type & operator+=(inner_type &a, const inner_type &b)
+                { checkType(a, b, "+="); a = (a + b); return a; }
+        friend inner_type & operator-=(inner_type &a, const inner_type &b)
+                { checkType(a, b, "-="); a = (a - b); return a; }
+        friend inner_type & operator*=(inner_type &a, const inner_type &b)
+                { checkType(a, b, "*="); a = (a * b); return a; }
+        friend inner_type & operator/=(inner_type &a, const inner_type &b)
+                { checkType(a, b, "/="); a = (a / b); return a; }
+        friend inner_type & operator%=(inner_type &a, const inner_type &b)
+                { checkType(a, b, "%="); a = (a % b); return a; }
 
     protected:
 
@@ -334,7 +342,10 @@ namespace custom {
 namespace ast {
     using variables_t = std::vector<std::vector<custom::custom_type>>;
     const std::vector<std::string> inline operations =
-        {"and", "or", "=", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+        {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
+    enum operations {
+        AND, OR, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
+    };
     struct ast_node {
         ast_node *parent = nullptr;
         ast_node *l = nullptr, *r = nullptr;
@@ -391,16 +402,65 @@ namespace ast {
 
         [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
             variables_t out;
-            for (const auto &v : orig) {
-                if (data.has_value()) {
+            if (data.has_value()) {
+                for (const auto &v : orig) {
                     if (data.value().name.empty()) {
-
+                        out.push_back({data.value()});
                     }
                     else {
-
+                        for (const auto &i : v) {
+                            if (i.name == data.value().name) {
+                                out.push_back({i});
+                                break;
+                            }
+                        }
                     }
                 }
             }
+            else {
+                auto ld = l->get_variables(orig), rd = r->get_variables(orig);
+                for (auto &v : ld) std::sort(v.begin(), v.end());
+                for (auto &v : rd) std::sort(v.begin(), v.end());
+
+                auto fun = [](custom::custom_type::inner_type &a,
+                              const custom::custom_type::inner_type &b,
+                              const short op) {
+                    switch (op) {
+                        case PL: a += b; break;
+                        case MN: a -= b; break;
+                        case PW: a *= b; break;
+                        case DL: a /= b; break;
+                        default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
+                    }
+                };
+                for (auto &i : ld) {
+                    for (auto &j : rd) {
+                        switch (op) {
+                            case PL:
+                            case MN:
+                            case PW:
+                            case DL: {
+                                if (i.size() != 1 || j.size() != 1)
+                                    throw std::logic_error("Wrong using operator " + operations[op]);
+                                if (i.front().name.empty()) {
+                                    out.push_back({j});
+                                    fun(out.front().data, i.front().data, op);
+                                }
+                                else {
+                                    out.push_back({i});
+                                    fun(out.front().data, j.front().data, op);
+                                }
+                                break;
+                            }
+                            default: {
+                                throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
+                            }
+                        }
+                    }
+                }
+
+            }
+            return out;
         }
 
         void tree() {
