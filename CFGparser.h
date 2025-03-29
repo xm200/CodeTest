@@ -153,7 +153,7 @@ namespace parse {
                         auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
                         auto buf = root->get_variables(orig);
                         auto res = buf.front().front();
-                        res.history.push_back({0, res});
+                        res.history = {0, res};
                         for (auto &j : ans) {
                             if (j.front().name == res.name) { j.front() = res; break; }
                         }

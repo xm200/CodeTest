@@ -158,7 +158,7 @@ namespace custom {
         short type = NONE;
         inner_type data;
         std::string name{};
-        std::vector<std::pair<std::size_t, custom_type>> history;
+        std::optional<std::pair<std::size_t, custom_type>> history{};
 
         custom_type() = default;
         explicit custom_type(const inner_type& d) : type(get_in_type(d)), data(d) {}
