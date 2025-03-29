@@ -120,6 +120,12 @@ namespace parse {
         node_t() = default;
     };
 
+    static short get_interval_type(const custom::custom_type &b) {
+        if (std::get_if<interval::interval<typeInt>>(&b.data.value()) != nullptr) return custom::custom_type::types::INT;
+        if (std::get_if<interval::interval<typeFloat>>(&b.data.value()) != nullptr) return custom::custom_type::types::FLOAT;
+        if (std::get_if<interval::interval<std::string>>(&b.data.value()) != nullptr) return custom::custom_type::types::INT;
+        return custom::custom_type::types::NONE;
+    }
 
     class parser {
         const std::vector<std::string> *code;
@@ -147,13 +153,55 @@ namespace parse {
             for (int i = 0; i < s.size(); ++i) {
                 switch (s[i]) {
                     case '=': {
+                        auto _s = custom::erase_spaces(s.substr(i + 1));
+                        if (_s.substr(0, 4).extract() == "int(" || _s.substr(0, 4).extract() == "int ") {
+                            auto *x = new custom::custom_type;
+                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
+                            interval::interval<typeInt> buf;
+                            buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
+                            x->data = buf;
+                            x->reset_type();
+                            for (auto &j : ans) {
+                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                            }
+                            ans.push_back({*x});
+                            return ans;
+                        }
+                        if (_s.substr(i, 6).extract() == "float(" || _s.substr(i, 6).extract() == "float ") {
+                            auto *x = new custom::custom_type;
+                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
+                            interval::interval<typeFloat> buf;
+                            buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
+                            x->data = buf;
+                            x->reset_type();
+                            for (auto &j : ans) {
+                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                            }
+                            ans.push_back({*x});
+                            return ans;
+                        }
+                        if (_s.substr(i, 6).extract() == "input(" || _s.substr(i, 6).extract() == "input ") {
+                            auto *x = new custom::custom_type;
+                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
+                            interval::interval<std::string> buf;
+                            buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
+                            x->data = buf;
+                            x->reset_type();
+                            for (auto &j : ans) {
+                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                            }
+                            ans.push_back({*x});
+                            return ans;
+                        }
                         if ((i + 1 < s.size() &&
                                 std::find(boo.begin(), boo.end(), s.extract()[i + 1]) != boo.end()) ||
                             (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
                         auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
                         auto buf = root->get_variables(orig);
                         auto res = buf.front().front();
-                        res.history = {0, res};
+                        auto *x = new custom::custom_type;
+                        *x = res;
+                        res.history = std::pair<std::size_t, custom::custom_type*>(0, x);
                         for (auto &j : ans) {
                             if (j.front().name == res.name) { j.front() = res; break; }
                         }
@@ -176,59 +224,6 @@ namespace parse {
             return {};
         }
 
-
-        // void split(const custom::str_type &s, const std::vector<custom::custom_type>& vars) {
-        //     auto buf = s.extract();
-        //     int idx = 0, l = 0;
-        //     // Найти начало оператора
-        //     for (auto i = 0; i < buf.size(); ++i) {
-        //         if (std::find(boo.begin(), boo.end(), buf[i]) != boo.end()) {
-        //             l = i;
-        //             break;
-        //         }
-        //     }
-        //
-        //     // Понять, что это за оператор
-        //     for (auto i = 0; i < custom::operations.size(); ++i) {
-        //         if (buf.size() - l >= custom::operations[i].size() && \
-        //                 (buf.substr(l, custom::operations[i].size()) == custom::operations[i])) {
-        //             idx = i;
-        //             break;
-        //         }
-        //     }
-        //
-        //     if (idx == 2) { // Оператор '='
-        //         for (const auto & var : vars) {
-        //             for (const auto & j : var) {
-        //                 if (j.name == custom::erase_spaces(s.substr(0, l)).extract()) {
-        //                     ///todo: add something like history saving
-        //                 }
-        //             }
-        //         }
-        //         custom::custom_type buf_custom;
-        //         buf_custom.name = custom::erase_spaces(s.substr(0, l)).extract();
-        //         // buf.data = ast::ast_node::get_variables();
-        //         this->root->variables.push_back(buf_custom);
-        //
-        //     } else { // Другие операторы
-        //         for (const auto & var : vars) {
-        //             for (const auto & j : var)
-        //                 if (j.name == custom::erase_spaces(s.substr(0, l)).extract()) goto saving; // Если нашли переменную,
-        //                                                                                                        // то перейдём к метке,
-        //                                                                                                        // в которой сохраним изменение
-        //         }
-        //         throw std::runtime_error("Function split(), not created variable is accessed!");
-        //         saving:
-        //         ///todo: variable operation saving
-        //     }
-            // Тестирования функционала
-// #if defined(DEBUG_MODE)
-//             const auto left = custom::erase_spaces(s.substr(0, l));
-//             const auto right = custom::erase_spaces(s.substr(l + custom::operations[idx].size()));
-//             std::cout << left.extract() << '\n' << right.extract() << '\n';
-// #endif
-//         }
-
     protected:
         node_t *root;
         bool graph_mode;
@@ -241,16 +236,6 @@ namespace parse {
             }
             return custom::custom_type::extract_type_from_string(buf.extract());
         };
-
-        /*
-         * a = 3
-         * a=3
-         * a= 3
-         * a==3
-         * a == 3
-         * a== 3
-         * a ==3
-         */
 
         void parse_bfs() const noexcept {
             ast::variables_t vars;
@@ -308,8 +293,28 @@ namespace parse {
             return code->size() - l;
         }
 
-        void parse(node_t *node, const size_t depth = 0) {
-            ast::variables_t vars;
+        template<typename T>
+        void write_to_file(const custom::custom_type &what) {
+            if (!what.data.has_value()) return;
+            std::size_t ind = -1;
+            for (auto i = cache().size(); i --> 0;) {
+                if (cache()[i] == '/' || cache()[i] == '\\') {
+                    ind = i;
+                    break;
+                }
+            }
+
+            std::ofstream out(cache().substr(0, ind));
+
+            if (const auto buf = std::get_if<interval::interval<T>>(&what.data.value()); buf != nullptr)
+                out << buf->any().value();
+
+            out.close();
+        }
+
+        void parse(node_t *node, const size_t depth = 0, const ast::variables_t &vars) {
+            ast::variables_t _vars = vars;
+            bool is_end = false;
 #if defined(DEBUG_MODE)
             if (node->l >= code->size()) throw
                         std::length_error("Unreachable start limit in function parse()");
@@ -333,20 +338,48 @@ namespace parse {
                                 i + 1,
                                 get_code_block(i + 1));
                         node->children.push_back(child);
-                        parse(child, depth + 1);
+                        custom::str_type buf(code->operator[](i)); // "else: "
+                        buf = erase_spaces(buf);
+                        custom::str_type buf_fw(first_word); // "else: "
+                        const auto root = ast::generate_ast(erase_spaces(buf.substr
+                            (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
+                        parse(child, depth + 1, root->get_variables(_vars));
                         i += child->len;
+                        is_end = true;
                         break;
                     }
                     default: {
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
-                        vars = translate(res, vars);
+                        _vars = translate(res, vars);
                         break;
                     }
                 }
             }
+            if (!is_end) {
+                for (auto &x : _vars) {
+                    for (auto &y : x) {
+                        switch (get_interval_type(y)) {
+                            case custom::custom_type::types::INT: {
+                                write_to_file<typeInt>(y);
+                                break;
+                            }
+                            case custom::custom_type::types::FLOAT: {
+                                write_to_file<typeFloat>(y);
+                                break;
+                            }
+                            case custom::custom_type::types::STRING: {
+                                write_to_file<std::string>(y);
+                                break;
+                            }
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
         }
-
+#undef sub
     private:
         enum search {
             IF, ELIF, ELSE, FOR, WHILE, ANOTHER
