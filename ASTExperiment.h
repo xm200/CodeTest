@@ -12,6 +12,7 @@
 #include <functional>
 #include <algorithm>
 #include <iostream>
+#include <algorithm>
 
 #define init_cession(a, ...) \
 template<typename> \
@@ -341,7 +342,7 @@ namespace custom {
 
 
 namespace ast {
-    using variables_t = std::vector<std::vector<custom::custom_type>>;
+    using variables_t = std::vector<std::vector<custom::custom_type*>>;
     const std::vector<std::string> inline operations =
         {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
     enum operations {
@@ -350,7 +351,7 @@ namespace ast {
     struct ast_node {
         ast_node *parent = nullptr;
         ast_node *l = nullptr, *r = nullptr;
-        std::optional<custom::custom_type> data{};
+        std::optional<custom::custom_type*> data{};
         std::size_t op = -1;
 
         explicit ast_node(ast_node *p) : parent(p) {}
@@ -397,7 +398,8 @@ namespace ast {
 
             //no operator found
             const auto type = custom::custom_type::extract_type_from_string(s.extract());
-            data = dereference_cast(s.extract(), type);
+            data = new custom::custom_type;
+            *data.value() = (dereference_cast(s.extract(), type));
 
         }
 
@@ -405,12 +407,12 @@ namespace ast {
             variables_t out;
             if (data.has_value()) {
                 for (const auto &v : orig) {
-                    if (data.value().name.empty()) {
+                    if (data.value()->name.empty()) {
                         out.push_back({data.value()});
                     }
                     else {
                         for (const auto &i : v) {
-                            if (i.name == data.value().name) {
+                            if (i->name == data.value()->name) {
                                 out.push_back({i});
                                 break;
                             }
@@ -443,13 +445,13 @@ namespace ast {
                             case DL: {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
-                                if (i.front().name.empty()) {
+                                if (i.front()->name.empty()) {
                                     out.push_back({j});
-                                    fun(out.back().front().data, i.front().data, op);
+                                    fun(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
                                     out.push_back({i});
-                                    fun(out.back().front().data, j.front().data, op);
+                                    fun(out.back().front()->data, j.front()->data, op);
                                 }
                                 break;
                             }
@@ -514,7 +516,7 @@ namespace ast {
         static void tree(ast_node *_root, const std::string &move) {
             if (_root->data != std::nullopt) {
                 std::cout << move << ' ';
-                sub_print(_root->data.value());
+                sub_print(*_root->data.value());
                 std::cout << '\n';
                 return;
             }
