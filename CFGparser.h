@@ -114,11 +114,18 @@ namespace parse {
     struct node_t {
         std::string name;
         std::vector<node_t *> children{};
+        std::vector<custom::custom_type> variables{};
         size_t l{}, len{};
         node_t(std::string n, const std::size_t b, const std::size_t e) : name(std::move(n)), l(b), len(e) {}
         node_t() = default;
     };
 
+    static short get_interval_type(const custom::custom_type &b) {
+        if (std::get_if<interval::interval<typeInt>>(&b.data.value()) != nullptr) return custom::custom_type::types::INT;
+        if (std::get_if<interval::interval<typeFloat>>(&b.data.value()) != nullptr) return custom::custom_type::types::FLOAT;
+        if (std::get_if<interval::interval<std::string>>(&b.data.value()) != nullptr) return custom::custom_type::types::INT;
+        return custom::custom_type::types::NONE;
+    }
 
     class parser {
         const std::vector<std::string> *code;
@@ -130,7 +137,7 @@ namespace parse {
         }
 
         void parse() {
-            if (graph_mode) parse(root);
+            if (graph_mode) parse(root, {{}});
             else parse_bfs();
         }
 
@@ -140,26 +147,111 @@ namespace parse {
             std::cout << std::flush;
         }
 
+        static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
+            auto ans = orig;
+            std::vector<char> boo = {'>', '<', '=', '!'};
+            for (int i = 0; i < s.size(); ++i) {
+                switch (s[i]) {
+                    case '=': {
+                        auto _s = custom::erase_spaces(s.substr(i + 1));
+                        if (_s.substr(0, 4).extract() == "int(" || _s.substr(0, 4).extract() == "int ") {
+                            auto *x = new custom::custom_type;
+                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
+                            interval::interval<typeInt> buf;
+                            buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
+                            x->data = buf;
+                            x->reset_type();
+                            for (auto &j : ans) {
+                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                            }
+                            ans.push_back({*x});
+                            return ans;
+                        }
+                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "float(" || _s.substr(i, 6).extract() == "float ")) {
+                            auto *x = new custom::custom_type;
+                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
+                            interval::interval<typeFloat> buf;
+                            buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
+                            x->data = buf;
+                            x->reset_type();
+                            for (auto &j : ans) {
+                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                            }
+                            ans.push_back({*x});
+                            return ans;
+                        }
+                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "input(" || _s.substr(i, 6).extract() == "input ")) {
+                            auto *x = new custom::custom_type;
+                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
+                            interval::interval<std::string> buf;
+                            buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
+                            x->data = buf;
+                            x->reset_type();
+                            for (auto &j : ans) {
+                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                            }
+                            ans.push_back({*x});
+                            return ans;
+                        }
+                        if ((i + 1 < s.size() &&
+                                std::find(boo.begin(), boo.end(), s.extract()[i + 1]) != boo.end()) ||
+                            (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
+                        auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
+                        auto buf = root->get_variables(orig);
+                        auto res = buf.front().front();
+                        auto *x = new custom::custom_type;
+                        *x = res;
+                        res.history = std::pair<std::size_t, custom::custom_type*>(0, x);
+                        res.name = x->name;
+                        res.data = x->data;
+                        for (auto &j : ans) {
+                            if (!j.empty() && !res.name.empty() && j.front().name == s.substr(0, i).extract()) { j.front() = res; goto end; }
+                        }
+                        ans.back().push_back(res);
+                        end:
+                        return ans;
+                    }
+                    case '+':
+                    case '-':
+                    case '*':
+                    case '/': {
+                        if (s[i + 1] != '=' || (s[i] == '/' && s.substr(i, 3).extract() != "//=")) break;
+                        const auto left = s.substr(0, i);
+                        const auto right = s.substr(i + 2);
+                        const std::string buf = "(" + custom::erase_spaces(right).extract() + ") " + (s[i] == '/' ? "//" : std::string(1, s[i])) + " " + custom::erase_spaces(left).extract();
+                        custom::str_type res(buf);
+                        return translate(res, orig);
+                    }
+                    default: break;
+                }
+            }
+            return {};
+        }
+
     protected:
         node_t *root;
         bool graph_mode;
 
-        static void parse_expr(const std::string &buf, node_t &node) { /// todo: think about +=, -=, ..., not only assign
-            auto ss = std::stringstream(buf);
-            std::vector<std::string> part1, part2;
-            std::string word;
-
+        static short get_type(const custom::str_type &buf) {
+            for (int i = 0; i < buf.size(); ++i) {
+                if (buf.substr(i, 4).extract() == "int(" || buf.substr(i, 4).extract() == "int ") return custom::custom_type::types::INT;
+                if (buf.substr(i, 6).extract() == "float(" || buf.substr(i, 6).extract() == "float ") return custom::custom_type::types::FLOAT;
+                if (buf.substr(i, 6).extract() == "input(" || buf.substr(i, 6).extract() == "input ") return custom::custom_type::types::STRING;
+            }
+            return custom::custom_type::extract_type_from_string(buf.extract());
         };
 
         void parse_bfs() const noexcept {
-            std::queue<node_t *> q;
-            q.push(root);
+            ast::variables_t vars;
+            std::vector<custom::custom_type> vars_orig;
+            std::queue<std::pair<node_t *, ast::variables_t>> q;
+            q.emplace(root, vars);
 
             while (!q.empty()) {
-                node_t *_root = q.front();
+                auto [fst, snd] = q.front();
                 q.pop();
 
-                for (auto i = _root->l; i < _root->l + _root->len; ++i) {
+                for (auto i = fst->l; i < fst->l + fst->len; ++i) {
                     std::string first_word;
                     auto expr = std::stringstream(code->operator[](i));
                     expr >> first_word;
@@ -170,16 +262,20 @@ namespace parse {
                         case ELSE:
                         case FOR:
                         case WHILE: {
-                            _root->children.push_back(new node_t(
+                            fst->children.push_back(new node_t(
                                     code->operator[](i).substr(get_spaces(code->operator[](i))),
                                     i + 1,
                                     get_code_block(i + 1)));
-                            q.push(_root->children.back());
+                            const custom::str_type buf(code->operator[](i));
+                            auto a = ast::generate_ast(buf);
+                            q.emplace(fst->children.back(), a->get_variables(vars));
                             i += get_code_block(i + 1);
                             break;
                         }
                         default:
-//                            parse_expr(code->operator[](i), *_root);
+                            auto buf = code->operator[](i);
+                            custom::str_type res(buf);
+                            vars = translate(res, vars);
                             break;
                     }
                 }
@@ -203,7 +299,28 @@ namespace parse {
             return code->size() - l;
         }
 
-        void parse(node_t *node, const size_t depth = 0) {
+        template<typename T>
+        void write_to_file(const custom::custom_type &what) {
+            if (!what.data.has_value()) return;
+            std::size_t ind = -1;
+            for (auto i = cache().size(); i --> 0;) {
+                if (cache()[i] == '/' || cache()[i] == '\\') {
+                    ind = i;
+                    break;
+                }
+            }
+
+            std::ofstream out(cache().substr(0, ind));
+
+            if (const auto buf = std::get_if<interval::interval<T>>(&what.data.value()); buf != nullptr)
+                out << buf->any().value();
+
+            out.close();
+        }
+
+        void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) {
+            ast::variables_t _vars = vars;
+            bool is_end = false;
 #if defined(DEBUG_MODE)
             if (node->l >= code->size()) throw
                         std::length_error("Unreachable start limit in function parse()");
@@ -227,16 +344,48 @@ namespace parse {
                                 i + 1,
                                 get_code_block(i + 1));
                         node->children.push_back(child);
-                        parse(child, depth + 1);
+                        custom::str_type buf(code->operator[](i)); // "else: "
+                        buf = erase_spaces(buf);
+                        custom::str_type buf_fw(first_word); // "else: "
+                        const auto root = ast::generate_ast(erase_spaces(buf.substr
+                            (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
+                        parse(child,  root->get_variables(_vars), depth + 1);
                         i += child->len;
+                        is_end = true;
                         break;
                     }
-                    default:
+                    default: {
+                        auto buf = code->operator[](i);
+                        custom::str_type res(buf);
+                        _vars = translate(res, _vars);
                         break;
+                    }
+                }
+            }
+            if (!is_end) {
+                for (auto &x : _vars) {
+                    for (auto &y : x) {
+                        switch (get_interval_type(y)) {
+                            case custom::custom_type::types::INT: {
+                                write_to_file<typeInt>(y);
+                                break;
+                            }
+                            case custom::custom_type::types::FLOAT: {
+                                write_to_file<typeFloat>(y);
+                                break;
+                            }
+                            case custom::custom_type::types::STRING: {
+                                write_to_file<std::string>(y);
+                                break;
+                            }
+                            default:
+                                break;
+                        }
+                    }
                 }
             }
         }
-
+#undef sub
     private:
         enum search {
             IF, ELIF, ELSE, FOR, WHILE, ANOTHER
@@ -250,13 +399,13 @@ namespace parse {
                     move_new[i] = '.';
             }
             move_new += "|---";
-            for (auto &vertex : _root->children) {
+            for (const auto &vertex : _root->children) {
                 tree(vertex, move_new);
             }
         }
 
         // ANOTHER - operators, types, functions calls and all that can be in the code
-        [[ nodiscard ]] static inline int get_construction_type(const std::string &buf) {
+        [[ nodiscard ]] static int get_construction_type(const std::string &buf) {
             if (buf == "if") return IF;
             if (buf == "elif") return ELIF;
             if (buf == "else" || buf == "else:") return ELSE;
@@ -267,5 +416,3 @@ namespace parse {
     };
 }
 #endif //CFG_H
-
-#pragma clang diagnostic pop
