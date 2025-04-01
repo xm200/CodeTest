@@ -148,49 +148,40 @@ namespace parse {
         }
 
         static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
+            auto check = [](const custom::str_type &s, const std::string_view it) {
+                return s.size() >= it.size() && s.substr(0, it.size() - 1).extract() == (it) &&
+                    (s[it.size() - 1] == ' ' || s[it.size() - 1] == '(');
+            };
             auto ans = orig;
             std::vector<char> boo = {'>', '<', '=', '!'};
             for (int i = 0; i < s.size(); ++i) {
                 switch (s[i]) {
                     case '=': {
                         auto _s = custom::erase_spaces(s.substr(i + 1));
-                        if (_s.substr(0, 4).extract() == "int(" || _s.substr(0, 4).extract() == "int ") {
+                        if (check(_s, "int") || check(_s, "float") || check(_s, "input")) {
                             auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<typeInt> buf;
-                            buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
-                            x->data = buf;
+                            x->name = custom::erase_spaces(s.substr(0, i - 1)).extract();
+                            if (check(_s, "int")) {
+                                interval::interval<typeInt> buf;
+                                buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
+                                x->data = buf;
+                            }
+                            if (check(_s, "float")) {
+                                interval::interval<typeFloat> buf;
+                                buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
+                                x->data = buf;
+                            }if (check(_s, "input")) {
+                                interval::interval<std::string> buf;
+                                buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
+                                x->data = buf;
+                            }
                             x->reset_type();
                             for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                                if (j.front()->name == x->name) {
+                                    j.front() = x; return ans;
+                                }
                             }
-                            ans.push_back({*x});
-                            return ans;
-                        }
-                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "float(" || _s.substr(i, 6).extract() == "float ")) {
-                            auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<typeFloat> buf;
-                            buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
-                            x->data = buf;
-                            x->reset_type();
-                            for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
-                            }
-                            ans.push_back({*x});
-                            return ans;
-                        }
-                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "input(" || _s.substr(i, 6).extract() == "input ")) {
-                            auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<std::string> buf;
-                            buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
-                            x->data = buf;
-                            x->reset_type();
-                            for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
-                            }
-                            ans.push_back({*x});
+                            ans.push_back({x});
                             return ans;
                         }
                         if ((i + 1 < s.size() &&
@@ -200,12 +191,12 @@ namespace parse {
                         auto buf = root->get_variables(orig);
                         auto res = buf.front().front();
                         auto *x = new custom::custom_type;
-                        *x = res;
-                        res.history = std::pair<std::size_t, custom::custom_type*>(0, x);
-                        res.name = x->name;
-                        res.data = x->data;
+                        *x = *res;
+                        res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
+                        res->name = x->name;
+                        res->data = x->data;
                         for (auto &j : ans) {
-                            if (!j.empty() && !res.name.empty() && j.front().name == s.substr(0, i).extract()) { j.front() = res; goto end; }
+                            if (!j.empty() && !res->name.empty() && j.front()->name == s.substr(0, i).extract()) { j.front() = res; goto end; }
                         }
                         ans.back().push_back(res);
                         end:
@@ -365,17 +356,17 @@ namespace parse {
             if (!is_end) {
                 for (auto &x : _vars) {
                     for (auto &y : x) {
-                        switch (get_interval_type(y)) {
+                        switch (get_interval_type(*y)) {
                             case custom::custom_type::types::INT: {
-                                write_to_file<typeInt>(y);
+                                write_to_file<typeInt>(*y);
                                 break;
                             }
                             case custom::custom_type::types::FLOAT: {
-                                write_to_file<typeFloat>(y);
+                                write_to_file<typeFloat>(*y);
                                 break;
                             }
                             case custom::custom_type::types::STRING: {
-                                write_to_file<std::string>(y);
+                                write_to_file<std::string>(*y);
                                 break;
                             }
                             default:
