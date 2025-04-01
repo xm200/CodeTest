@@ -73,6 +73,7 @@ int main(const int argc, char *argv[]) {
 
     parse::parser p(parse::read_file(path), m);
     p.parse();
+    p.tree();
 
     const std::string line = "a > 3 or (a < 4 and b > 5)";
     const std::string abc = "a = 3 * 3 + 123456 % 12345";

@@ -137,7 +137,7 @@ namespace parse {
         }
 
         void parse() {
-            if (graph_mode) parse(root);
+            if (graph_mode) parse(root, {{}});
             else parse_bfs();
         }
 
@@ -167,7 +167,7 @@ namespace parse {
                             ans.push_back({*x});
                             return ans;
                         }
-                        if (_s.substr(i, 6).extract() == "float(" || _s.substr(i, 6).extract() == "float ") {
+                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "float(" || _s.substr(i, 6).extract() == "float ")) {
                             auto *x = new custom::custom_type;
                             x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
                             interval::interval<typeFloat> buf;
@@ -180,7 +180,7 @@ namespace parse {
                             ans.push_back({*x});
                             return ans;
                         }
-                        if (_s.substr(i, 6).extract() == "input(" || _s.substr(i, 6).extract() == "input ") {
+                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "input(" || _s.substr(i, 6).extract() == "input ")) {
                             auto *x = new custom::custom_type;
                             x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
                             interval::interval<std::string> buf;
@@ -202,9 +202,13 @@ namespace parse {
                         auto *x = new custom::custom_type;
                         *x = res;
                         res.history = std::pair<std::size_t, custom::custom_type*>(0, x);
+                        res.name = x->name;
+                        res.data = x->data;
                         for (auto &j : ans) {
-                            if (j.front().name == res.name) { j.front() = res; break; }
+                            if (!j.empty() && !res.name.empty() && j.front().name == s.substr(0, i).extract()) { j.front() = res; goto end; }
                         }
+                        ans.back().push_back(res);
+                        end:
                         return ans;
                     }
                     case '+':
@@ -240,14 +244,14 @@ namespace parse {
         void parse_bfs() const noexcept {
             ast::variables_t vars;
             std::vector<custom::custom_type> vars_orig;
-            std::queue<node_t *> q;
-            q.push(root);
+            std::queue<std::pair<node_t *, ast::variables_t>> q;
+            q.emplace(root, vars);
 
             while (!q.empty()) {
-                node_t *_root = q.front();
+                auto [fst, snd] = q.front();
                 q.pop();
 
-                for (auto i = _root->l; i < _root->l + _root->len; ++i) {
+                for (auto i = fst->l; i < fst->l + fst->len; ++i) {
                     std::string first_word;
                     auto expr = std::stringstream(code->operator[](i));
                     expr >> first_word;
@@ -258,11 +262,13 @@ namespace parse {
                         case ELSE:
                         case FOR:
                         case WHILE: {
-                            _root->children.push_back(new node_t(
+                            fst->children.push_back(new node_t(
                                     code->operator[](i).substr(get_spaces(code->operator[](i))),
                                     i + 1,
                                     get_code_block(i + 1)));
-                            q.push(_root->children.back());
+                            const custom::str_type buf(code->operator[](i));
+                            auto a = ast::generate_ast(buf);
+                            q.emplace(fst->children.back(), a->get_variables(vars));
                             i += get_code_block(i + 1);
                             break;
                         }
@@ -312,7 +318,7 @@ namespace parse {
             out.close();
         }
 
-        void parse(node_t *node, const size_t depth = 0, const ast::variables_t &vars) {
+        void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) {
             ast::variables_t _vars = vars;
             bool is_end = false;
 #if defined(DEBUG_MODE)
@@ -343,7 +349,7 @@ namespace parse {
                         custom::str_type buf_fw(first_word); // "else: "
                         const auto root = ast::generate_ast(erase_spaces(buf.substr
                             (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
-                        parse(child, depth + 1, root->get_variables(_vars));
+                        parse(child,  root->get_variables(_vars), depth + 1);
                         i += child->len;
                         is_end = true;
                         break;
@@ -351,7 +357,7 @@ namespace parse {
                     default: {
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
-                        _vars = translate(res, vars);
+                        _vars = translate(res, _vars);
                         break;
                     }
                 }
