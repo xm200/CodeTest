@@ -10,6 +10,7 @@
 #include <vector>
 #include <variant>
 #include <functional>
+#include <algorithm>
 #include <iostream>
 
 #define init_cession(a, ...) \
