@@ -1,6 +1,15 @@
 *CodeTest* is used for *Code Testing*
 
-**Usage**:
+**Requirements:**
+
+    cmake, make, git
+
+**Building:**
+
+    git clone https://github.com/CodeTest && cd CodeTest 
+        && cmake CmakeLists.txt && cmake --build .
+
+**Usage:**
 
 *Linux/Macos*
 
