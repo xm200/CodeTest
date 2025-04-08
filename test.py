@@ -1,7 +1,6 @@
+c = int(input())
 a = 3
 b = a + 3
-c = int(input())
-print(c)
 
 
 if c == "a":

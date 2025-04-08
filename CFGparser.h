@@ -149,8 +149,8 @@ namespace parse {
 
         static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
             auto check = [](const custom::str_type &s, const std::string_view it) {
-                return s.size() >= it.size() && s.substr(0, it.size() - 1).extract() == (it) &&
-                    (s[it.size() - 1] == ' ' || s[it.size() - 1] == '(');
+                return s.size() >= it.size() && s.substr(0, it.size()).extract() == (it) &&
+                    (s[it.size()] == ' ' || s[it.size()] == '(');
             };
             auto ans = orig;
             std::vector<char> boo = {'>', '<', '=', '!'};
@@ -158,35 +158,49 @@ namespace parse {
                 switch (s[i]) {
                     case '=': {
                         auto _s = custom::erase_spaces(s.substr(i + 1));
+
                         if (check(_s, "int") || check(_s, "float") || check(_s, "input")) {
                             auto *x = new custom::custom_type;
                             x->name = custom::erase_spaces(s.substr(0, i - 1)).extract();
+
                             if (check(_s, "int")) {
                                 interval::interval<typeInt> buf;
                                 buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
                                 x->data = buf;
                             }
+
                             if (check(_s, "float")) {
                                 interval::interval<typeFloat> buf;
                                 buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
                                 x->data = buf;
-                            }if (check(_s, "input")) {
+                            }
+
+                            if (check(_s, "input")) {
                                 interval::interval<std::string> buf;
                                 buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
                                 x->data = buf;
                             }
+
                             x->reset_type();
                             for (auto &j : ans) {
-                                if (j.front()->name == x->name) {
-                                    j.front() = x; return ans;
+                                bool found = false;
+                                for (auto &k : j) {
+                                    if (k->name == x->name) {
+                                        x->history = {0, k};
+                                        k = x;
+                                        found = true;
+                                    }
                                 }
+                                if (!found)
+                                    j.push_back(x);
                             }
-                            ans.push_back({x});
                             return ans;
                         }
+
                         if ((i + 1 < s.size() &&
                                 std::find(boo.begin(), boo.end(), s.extract()[i + 1]) != boo.end()) ||
                             (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
+
                         auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
                         auto buf = root->get_variables(orig);
 
