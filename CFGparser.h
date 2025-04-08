@@ -189,17 +189,22 @@ namespace parse {
                             (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
                         auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
                         auto buf = root->get_variables(orig);
-                        auto res = buf.front().front();
-                        auto *x = new custom::custom_type;
-                        *x = *res;
-                        res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
-                        res->name = x->name;
-                        res->data = x->data;
-                        for (auto &j : ans) {
-                            if (!j.empty() && !res->name.empty() && j.front()->name == s.substr(0, i).extract()) { j.front() = res; goto end; }
+
+                        for (auto &var: buf) {
+                            auto res = buf.front().front();
+                            auto *x = new custom::custom_type;
+                            *x = *res;
+                            res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
+
+                            for (auto &k : ans) {
+                                for (auto &j : k) {
+                                    if (j->name == s.substr(0, i).extract()) { j = res; }
+                                }
+                            }
+
+                            for (auto &vec: ans)
+                                vec.push_back(res);
                         }
-                        ans.back().push_back(res);
-                        end:
                         return ans;
                     }
                     case '+':

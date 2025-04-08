@@ -12,7 +12,6 @@
 #include <functional>
 #include <algorithm>
 #include <iostream>
-#include <algorithm>
 
 #define init_cession(a, ...) \
 template<typename> \
