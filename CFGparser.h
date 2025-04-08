@@ -318,7 +318,7 @@ namespace parse {
             if (!what.data.has_value()) return;
 
             if (const auto buf = std::get_if<interval::interval<T>>(&what.data.value()); buf != nullptr)
-                out << buf->any().value();
+                out << buf->any().value() << '\n';
 
         }
 
