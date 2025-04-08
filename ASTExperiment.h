@@ -563,11 +563,4 @@ namespace ast {
     }
 
 }
-#undef init_cession
-#undef init_struct_cession
-#undef enable_all_types
-#undef enable_int
-#undef enable_float
-#undef enable_string
-#undef close_cession
 #endif

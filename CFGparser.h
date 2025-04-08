@@ -8,7 +8,7 @@
 #include <vector>
 #include <queue>
 #include <iostream>
-
+#include "ASTExperiment.h"
 
 
 namespace parse {
@@ -311,23 +311,15 @@ namespace parse {
             return code->size() - l;
         }
 
-        template<typename T>
-        void write_to_file(const custom::custom_type &what) {
+        init_struct_cession(what.data, void write_to_file(const custom::custom_type &what, std::ofstream &out))
+            enable_all_types(write_to_file, what, out)
+        close_cession(T)
+        void write_to_file(const custom::custom_type &what, std::ofstream &out) {
             if (!what.data.has_value()) return;
-            std::size_t ind = -1;
-            for (auto i = cache().size(); i --> 0;) {
-                if (cache()[i] == '/' || cache()[i] == '\\') {
-                    ind = i;
-                    break;
-                }
-            }
-
-            std::ofstream out(cache().substr(0, ind));
 
             if (const auto buf = std::get_if<interval::interval<T>>(&what.data.value()); buf != nullptr)
                 out << buf->any().value();
 
-            out.close();
         }
 
         void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) {
@@ -374,27 +366,16 @@ namespace parse {
                     }
                 }
             }
+
+
             if (!is_end) {
+                std::ofstream out(cache().substr(0, cache().size() - 6) + "output.txt");
                 for (auto &x : _vars) {
                     for (auto &y : x) {
-                        switch (get_interval_type(*y)) {
-                            case custom::custom_type::types::INT: {
-                                write_to_file<typeInt>(*y);
-                                break;
-                            }
-                            case custom::custom_type::types::FLOAT: {
-                                write_to_file<typeFloat>(*y);
-                                break;
-                            }
-                            case custom::custom_type::types::STRING: {
-                                write_to_file<std::string>(*y);
-                                break;
-                            }
-                            default:
-                                break;
-                        }
+                        write_to_file(*y, out);
                     }
                 }
+                out.close();
             }
         }
 #undef sub
@@ -427,4 +408,12 @@ namespace parse {
         }
     };
 }
+#undef init_cession
+#undef init_struct_cession
+#undef enable_all_types
+#undef enable_int
+#undef enable_float
+#undef enable_string
+#undef close_cession
+
 #endif //CFG_H
