@@ -72,8 +72,21 @@ int main(const int argc, char *argv[]) {
     const std::string path = argv[argc - 1];
 
     parse::parser p(parse::read_file(path), m);
-    p.parse();
-    p.tree();
+
+    std::string asd = "a = 3 + 3";
+    custom::str_type afd(asd);
+
+    std::string asd1 = "b = 3";
+    custom::str_type afd1(asd);
+
+    auto a = p.translate(afd1, p.translate(afd, {{}}));
+    for (auto &i : a) {
+        for (auto &j : i) {
+            std::cout << j.name << ' ';
+        }
+    }
+    // p.parse();
+    // p.tree();
 
     const std::string line = "a > 3 or (a < 4 and b > 5)";
     const std::string abc = "a = 3 * 3 + 123456 % 12345";

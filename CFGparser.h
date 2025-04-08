@@ -147,6 +147,19 @@ namespace parse {
             std::cout << std::flush;
         }
 
+        template<typename T> static void optimize(const custom::str_type &s, ast::variables_t &orig) {
+            auto *x = new custom::custom_type;
+            x->name = s.extract();
+            interval::interval<T> buf;
+            buf.add_interval(interval::minimal<T>(), interval::maximal<T>());
+            x->data = buf;
+            bool flag = false;
+            for (auto &j : orig) {
+                if (j.front().name == x->name) { j.front() = *x; flag = true; }
+            }
+            if (!flag) orig.push_back({*x});
+        }
+
         static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
             auto ans = orig;
             std::vector<char> boo = {'>', '<', '=', '!'};
@@ -155,49 +168,26 @@ namespace parse {
                     case '=': {
                         auto _s = custom::erase_spaces(s.substr(i + 1));
                         if (_s.substr(0, 4).extract() == "int(" || _s.substr(0, 4).extract() == "int ") {
-                            auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<typeInt> buf;
-                            buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
-                            x->data = buf;
-                            x->reset_type();
-                            for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
-                            }
-                            ans.push_back({*x});
+                            optimize<typeInt>(_s, ans);
                             return ans;
                         }
+
                         if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "float(" || _s.substr(i, 6).extract() == "float ")) {
-                            auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<typeFloat> buf;
-                            buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
-                            x->data = buf;
-                            x->reset_type();
-                            for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
-                            }
-                            ans.push_back({*x});
+                            optimize<typeFloat>(_s, ans);
                             return ans;
                         }
+
                         if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "input(" || _s.substr(i, 6).extract() == "input ")) {
-                            auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<std::string> buf;
-                            buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
-                            x->data = buf;
-                            x->reset_type();
-                            for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
-                            }
-                            ans.push_back({*x});
+                            optimize<std::string>(_s, ans);
                             return ans;
                         }
+
                         if ((i + 1 < s.size() &&
                                 std::find(boo.begin(), boo.end(), s.extract()[i + 1]) != boo.end()) ||
                             (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
-                        auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
-                        auto buf = root->get_variables(orig);
+
+                        const auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
+                        const auto buf = root->get_variables(ans);
                         auto res = buf.front().front();
                         auto *x = new custom::custom_type;
                         *x = res;

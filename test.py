@@ -9,7 +9,7 @@ if c == "a":
         print(c)
     elif a == 2:
         if c == 3:
-            print(b)
+            print('b')
         else:
             print(a)
     else:
