@@ -14,3 +14,5 @@ add_compile_definitions(_GLIBCXX_DEBUG_PEDANTIC)
 add_executable(CodeTest main.cpp interval.h ASTExperiment.h CFGparser.h)
 
 add_executable(test_lib_interval interval.cpp interval.h)
+
+install(TARGETS CodeTest DESTINATION bin)
