@@ -6,8 +6,11 @@
 
 **Building:**
 
-    git clone https://github.com/CodeTest && cd CodeTest 
-        && cmake CmakeLists.txt && cmake --build .
+    git clone https://github.com/CodeTest 
+    cd CodeTest 
+    cmake .
+    make
+    sudo make install
 
 **Usage:**
 
