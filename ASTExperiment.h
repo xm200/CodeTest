@@ -446,12 +446,13 @@ namespace ast {
                             case PS: {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
+                                out.push_back({{new custom::custom_type}});
                                 if (i.front()->name.empty()) {
-                                    out.push_back({j});
+                                    *out.back().front() = *j.front();
                                     fun(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
-                                    out.push_back({i});
+                                    *out.back().front() = *i.front();
                                     fun(out.back().front()->data, j.front()->data, op);
                                 }
                                 break;

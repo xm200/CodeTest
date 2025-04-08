@@ -208,6 +208,7 @@ namespace parse {
                             auto res = var.front();
                             auto *x = new custom::custom_type;
                             *x = *res;
+                            res->name = custom::erase_spaces(s.substr(0, i)).extract();
                             res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
 
                             for (auto &k : ans) {
