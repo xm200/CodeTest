@@ -12,7 +12,6 @@
 #include <functional>
 #include <algorithm>
 #include <iostream>
-#include <algorithm>
 
 #define init_cession(a, ...) \
 template<typename> \
@@ -433,6 +432,7 @@ namespace ast {
                         case MN: a -= b; break;
                         case PW: a *= b; break;
                         case DL: a /= b; break;
+                        case PS: a %= b; break;
                         default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
                     }
                 };
@@ -442,7 +442,8 @@ namespace ast {
                             case PL:
                             case MN:
                             case PW:
-                            case DL: {
+                            case DL:
+                            case PS: {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
                                 if (i.front()->name.empty()) {
@@ -455,6 +456,7 @@ namespace ast {
                                 }
                                 break;
                             }
+                            // case EQ:
                             default: {
                                 throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
                             }
@@ -466,7 +468,22 @@ namespace ast {
             return out;
         }
 
-        void tree() {
+        static void cmpPush(variables_t &write, const variables_t &orig) {
+            auto buf = write; // todo cmpPush
+            write = orig;
+            for (auto &i : orig) {
+                /// a < 3 || a > 4
+                /// {{a; b < 3}; {a; b > 4}}
+                for (auto &j : buf) {
+                    auto buf_index = 0;
+                    for (auto &k : i) {
+
+                    }
+                }
+            }
+        }
+
+        void tree() const {
             const std::string s;
             tree(this, s);
             std::cout << std::flush;
@@ -513,7 +530,7 @@ namespace ast {
             }
             else std::cout << std::get<interval::interval<T>>(v.data.value()).print();
         }
-        static void tree(ast_node *_root, const std::string &move) {
+        static void tree(const ast_node *_root, const std::string &move) {
             if (_root->data != std::nullopt) {
                 std::cout << move << ' ';
                 sub_print(*_root->data.value());

@@ -193,8 +193,8 @@ namespace parse {
                         auto *x = new custom::custom_type;
                         *x = *res;
                         res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
-                        res->name = x->name;
-                        res->data = x->data;
+                        // res->name = x->name;
+                        // res->data = x->data;
                         for (auto &j : ans) {
                             if (!j.empty() && !res->name.empty() && j.front()->name == s.substr(0, i).extract()) { j.front() = res; goto end; }
                         }
