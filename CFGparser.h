@@ -170,7 +170,8 @@ namespace parse {
                                 interval::interval<typeFloat> buf;
                                 buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
                                 x->data = buf;
-                            }if (check(_s, "input")) {
+                            }
+                            if (check(_s, "input")) {
                                 interval::interval<std::string> buf;
                                 buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
                                 x->data = buf;

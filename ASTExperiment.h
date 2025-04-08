@@ -456,7 +456,11 @@ namespace ast {
                                 }
                                 break;
                             }
-                            // case EQ:
+                            case EQ: {
+                                if (i.size() == 1 && j.size() == 1) {
+
+                                }
+                            }
                             default: {
                                 throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
                             }
@@ -471,13 +475,15 @@ namespace ast {
         static void cmpPush(variables_t &write, const variables_t &orig) {
             auto buf = write; // todo cmpPush
             write = orig;
-            for (auto &i : orig) {
+            for (auto &i : write) {
                 /// a < 3 || a > 4
                 /// {{a; b < 3}; {a; b > 4}}
                 for (auto &j : buf) {
                     auto buf_index = 0;
                     for (auto &k : i) {
-
+                        if (k->name == j[buf_index]->name) {
+                            k = j[buf_index++];
+                        }
                     }
                 }
             }
