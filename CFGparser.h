@@ -287,7 +287,7 @@ namespace parse {
                         default:
                             auto buf = code->operator[](i);
                             custom::str_type res(buf);
-                            vars = translate(res, vars);
+                            auto asd = translate(res, vars);
                             break;
                     }
                 }
@@ -361,7 +361,9 @@ namespace parse {
                     default: {
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
-                        _vars = translate(res, _vars);
+                        auto buffer_vars = translate(res, _vars);
+                        if (!buffer_vars.front().empty())
+                            _vars = buffer_vars;
                         break;
                     }
                 }

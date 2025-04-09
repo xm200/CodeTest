@@ -402,6 +402,19 @@ namespace ast {
 
         }
 
+        void apply_oper(custom::custom_type::inner_type &a, const custom::custom_type::inner_type &b, const std::size_t op) const {
+            switch (op) {
+                case PL: a += b; break;
+                case MN: a -= b; break;
+                case PW: a *= b; break;
+                case DL: a /= b; break;
+                case PS: a %= b; break;
+                case EQ: a = a == b; break;
+                case NQ: a = a != b; break;
+                default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
+            }
+        };
+
         [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
             variables_t out;
             if (data.has_value()) {
@@ -424,20 +437,6 @@ namespace ast {
                 for (auto &v : ld) std::sort(v.begin(), v.end());
                 for (auto &v : rd) std::sort(v.begin(), v.end());
 
-                auto fun = [](custom::custom_type::inner_type &a,
-                              const custom::custom_type::inner_type &b,
-                              const std::size_t op) {
-                    switch (op) {
-                        case PL: a += b; break;
-                        case MN: a -= b; break;
-                        case PW: a *= b; break;
-                        case DL: a /= b; break;
-                        case PS: a %= b; break;
-                        case EQ: a = a == b; break;
-                        case NQ: a = a != b; break;
-                        default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
-                    }
-                };
                 for (auto &i : ld) {
                     for (auto &j : rd) {
                         switch (op) {
@@ -453,11 +452,11 @@ namespace ast {
                                 out.push_back({{new custom::custom_type}});
                                 if (i.front()->name.empty()) {
                                     *out.back().front() = *j.front();
-                                    fun(out.back().front()->data, i.front()->data, op);
+                                    apply_oper(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
                                     *out.back().front() = *i.front();
-                                    fun(out.back().front()->data, j.front()->data, op);
+                                    apply_oper(out.back().front()->data, j.front()->data, op);
                                 }
                                 break;
                             }
@@ -467,7 +466,6 @@ namespace ast {
                         }
                     }
                 }
-
             }
             return out;
         }
