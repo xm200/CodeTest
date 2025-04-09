@@ -329,6 +329,17 @@ namespace parse {
             return code->size() - l;
         }
 
+        std::size_t abc(std::size_t op) {
+            switch (op) {
+                case EQ: return NE;
+                case NE: return EQ;
+                case LT: return GE;
+                case GE: return LT;
+                case GT: return LE;
+                case LE: return GT;
+            }
+        }
+
         init_struct_cession(what, std::string from_any_to_str(custom::custom_type::inner_type &what))
         enable_all_types(from_any_to_str, what)
         close_cession(T)
