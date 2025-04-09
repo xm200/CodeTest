@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 #include <iostream>
+#include <set>
 #include "ASTExperiment.h"
 
 
@@ -48,7 +49,7 @@ namespace parse {
             else if constexpr (get_os() == LINUX || get_os() == MACOS) path = way + '/';
                 // ReSharper disable once CppDFAUnreachableCode
             else path = way + '\\';
-
+            out.open(path + "output.txt");
                 // ReSharper disable once CppDFAUnreachableCode
                 // ReSharper disable once CppRedundantBooleanExpressionArgument
             if constexpr (get_os() == LINUX || get_os() == MACOS) path += "cache/";
@@ -58,6 +59,8 @@ namespace parse {
             inited = true;
         }
 
+        std::ofstream& write_path() { return out; }
+
         ~cache_t() {
             if (!inited) return;
 #if !defined(DO_NOT_REMOVE_CACHE)
@@ -66,8 +69,15 @@ namespace parse {
             if constexpr (get_os() == LINUX || get_os() == MACOS) system(("rm -rf " + path).c_str());
                 // ReSharper disable once CppDFAUnreachableCode
             else system(("rd /s /q " + path).c_str()); // Remove dir
+
+            for (auto it: tests)
+                write_to_file(it);
+
+            out.close();
 #endif
         }
+
+        std::set<custom::custom_type::inner_type>& get_tests_set() { return tests; }
 
         const std::string &operator()() const {
 #if defined(DEBUG_MODE)
@@ -76,9 +86,23 @@ namespace parse {
             return path;
         }
 
+       init_struct_cession(what, void write_to_file(custom::custom_type::inner_type &what))
+          enable_all_types(write_to_file, what)
+       close_cession(T)
+       void write_to_file(custom::custom_type::inner_type &what) {
+            if (!what.has_value()) return;
+            if (const auto buf = std::get_if<interval::interval<T>>(&what.value()); buf != nullptr) {
+                line << buf->any().value();
+                out << line.str() << '\n';
+            }
+       }
+
     private:
         std::string path;
         bool inited = false;
+        std::ofstream out;
+        std::stringstream line;
+        std::set<custom::custom_type::inner_type> tests;
     } inline cache;
 
 
@@ -311,20 +335,9 @@ namespace parse {
             return code->size() - l;
         }
 
-        init_struct_cession(what.data, void write_to_file(const custom::custom_type &what, std::ofstream &out))
-            enable_all_types(write_to_file, what, out)
-        close_cession(T)
-        void write_to_file(const custom::custom_type &what, std::ofstream &out) {
-            if (!what.data.has_value()) return;
-
-            if (const auto buf = std::get_if<interval::interval<T>>(&what.data.value()); buf != nullptr)
-                out << buf->any().value() << '\n';
-
-        }
-
         void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) {
             ast::variables_t _vars = vars;
-            bool is_end = false;
+
 #if defined(DEBUG_MODE)
             if (node->l >= code->size()) throw
                         std::length_error("Unreachable start limit in function parse()");
@@ -355,7 +368,6 @@ namespace parse {
                             (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
                         parse(child,  root->get_variables(_vars), depth + 1);
                         i += child->len;
-                        is_end = true;
                         break;
                     }
                     default: {
@@ -369,16 +381,8 @@ namespace parse {
                 }
             }
 
-
-            if (!is_end) {
-                std::ofstream out(cache().substr(0, cache().size() - 6) + "output.txt");
-                for (auto &x : _vars) {
-                    for (auto &y : x) {
-                        write_to_file(*y, out);
-                    }
-                }
-                out.close();
-            }
+            for (auto &x : _vars)
+                for (const auto &y : x) cache.get_tests_set().insert(y->data);
         }
 #undef sub
     private:

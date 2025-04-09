@@ -4,3 +4,5 @@ c = int(input())
 
 if not c == 3:
     print("ucucuga")
+    if b < 5:
+        print("aaa")
