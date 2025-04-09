@@ -3,7 +3,6 @@ project(CodeTest)
 
 add_compile_definitions(typeInt=long\ long)
 add_compile_definitions(typeFloat=long\ double)
-add_compile_definitions(VERBOSE)
 
 set(CMAKE_CXX_STANDARD 17)
 option(DEBUG "Provide debug mode" ON)

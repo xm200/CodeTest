@@ -33,7 +33,8 @@ namespace parse {
     }
 
     struct cache_t {
-        void init(const std::string &way) {
+        void init(const std::string &way, const bool v, const std::string &output_file) {
+            verbose = v;
 #if defined(DEBUG_MODE)
             if (inited) {
                 if (way + '/' == path || way == path || way + '\\' == path) return;
@@ -47,7 +48,9 @@ namespace parse {
             else if constexpr (get_os() == LINUX || get_os() == MACOS) path = way + '/';
                 // ReSharper disable once CppDFAUnreachableCode
             else path = way + '\\';
-            out.open(path + "output.txt");
+            if (output_file.empty()) out_path = path + "output.txt";
+            else out_path = output_file;
+            out.open(out_path);
                 // ReSharper disable once CppDFAUnreachableCode
                 // ReSharper disable once CppRedundantBooleanExpressionArgument
             if constexpr (get_os() == LINUX || get_os() == MACOS) path += "cache/";
@@ -70,7 +73,11 @@ namespace parse {
 
             write_to_file();
 
+            if (verbose) std::cout << "generated data had written to " << out_path << std::endl;
+
             out.close();
+
+
 #endif
         }
 
@@ -92,13 +99,14 @@ namespace parse {
 
     private:
         std::string path;
-        bool inited = false;
+        std::string out_path;
+        bool inited = false, verbose = false;
         std::ofstream out;
         std::set<std::string> tests;
     } inline cache;
 
 
-    inline std::vector<std::string> *read_file(const std::string &path) {
+    inline std::vector<std::string> *read_file(const std::string &path, const bool v, const std::string &output_file) {
         std::size_t ind = -1, point = path.size();
         for (auto i = path.size(); i --> 0;) {
             if (point == path.size() && path[i] == '.') point = i;
@@ -108,7 +116,7 @@ namespace parse {
             }
         }
 
-        cache.init(path.substr(0, (ind == -1 ? 0 : ind)));
+        cache.init(path.substr(0, ind == -1 ? 0 : ind), v, output_file);
         file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
 
         std::string buf;
@@ -117,13 +125,12 @@ namespace parse {
         while (std::getline(file, buf)) out->push_back(buf);
         file.close();
 
-#if defined(VERBOSE)
-        std::cout << "path to cache: " << cache() << '\n';
-        std::cout << "file name: " << file_name << '\n';
-        std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
-        std::cout << "code have " << out->size() << " lines\n";
-#endif
-
+        if (v) {
+            std::cout << "path to cache: " << cache() << '\n';
+            std::cout << "file name: " << file_name << '\n';
+            std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
+            std::cout << "code have " << out->size() << " lines\n";
+        }
         return out;
     }
 
@@ -146,14 +153,18 @@ namespace parse {
     class parser {
         const std::vector<std::string> *code;
     public:
-        explicit parser(const std::vector<std::string> *code_, const bool gm) {
+        explicit parser(const std::vector<std::string> *code_, const bool gm, const bool v) {
             code = code_;
             root = new node_t("root", 0, code->size());
             graph_mode = gm;
+            verbose = v;
         }
 
         void parse() {
-            if (graph_mode) parse(root, {{}});
+            if (graph_mode) {
+                parse(root, {{}});
+                if (verbose) std::cout << '\r';
+            }
             else parse_bfs();
         }
 
@@ -258,7 +269,7 @@ namespace parse {
 
     protected:
         node_t *root;
-        bool graph_mode;
+        bool graph_mode, verbose;
 
         static short get_type(const custom::str_type &buf) {
             for (int i = 0; i < buf.size(); ++i) {
@@ -349,6 +360,9 @@ namespace parse {
 #endif
 
             for (auto i = node->l; i < node->l + node->len; ++i) {
+                if (code->operator[](i).empty()) continue;
+                if (verbose) std::cout << '\r' << "line " << i + 1 << " / " << code->size() << std::flush;
+
                 std::string first_word;
                 auto expr = std::stringstream(code->operator[](i));
                 expr >> first_word;
