@@ -230,8 +230,8 @@ namespace custom {
                 const std::string &n) {
             checkType(a, b, n);
             interval::interval<T> buf;
-            it(buf, a);
-            return buf * std::get<interval::interval<T>>(b.value());
+            it(buf, b);
+            return buf * std::get<interval::interval<T>>(a.value());
         }
 
         void checkType(const custom_type &a, const std::string &name_op) const {
@@ -402,14 +402,14 @@ namespace ast {
 
         }
 
-        void apply_oper(custom::custom_type::inner_type &a, const custom::custom_type::inner_type &b, const std::size_t op) const {
+        static void apply_oper(custom::custom_type::inner_type &a, const custom::custom_type::inner_type &b, const std::size_t op) {
             switch (op) {
                 case PL: a += b; break;
                 case MN: a -= b; break;
                 case PW: a *= b; break;
                 case DL: a /= b; break;
                 case PS: a %= b; break;
-                case EQ: a = a == b; break;
+                case EQ: a = (a == b); break;
                 case NQ: a = a != b; break;
                 default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
             }

@@ -362,7 +362,7 @@ namespace parse {
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
                         auto buffer_vars = translate(res, _vars);
-                        if (!buffer_vars.front().empty())
+                        if (!buffer_vars.empty())
                             _vars = buffer_vars;
                         break;
                     }
