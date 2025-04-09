@@ -70,14 +70,13 @@ namespace parse {
                 // ReSharper disable once CppDFAUnreachableCode
             else system(("rd /s /q " + path).c_str()); // Remove dir
 
-            for (auto it: tests)
-                write_to_file(it);
+            write_to_file();
 
             out.close();
 #endif
         }
 
-        std::set<custom::custom_type::inner_type>& get_tests_set() { return tests; }
+        std::set<std::string>& get_tests_set() { return tests; }
 
         const std::string &operator()() const {
 #if defined(DEBUG_MODE)
@@ -86,14 +85,10 @@ namespace parse {
             return path;
         }
 
-       init_struct_cession(what, void write_to_file(custom::custom_type::inner_type &what))
-          enable_all_types(write_to_file, what)
-       close_cession(T)
-       void write_to_file(custom::custom_type::inner_type &what) {
-            if (!what.has_value()) return;
-            if (const auto buf = std::get_if<interval::interval<T>>(&what.value()); buf != nullptr) {
-                line << buf->any().value();
-                out << line.str() << '\n';
+       void write_to_file() {
+            for (const auto& it : tests) {
+                if (it.empty()) continue;
+                out << it << '\n';
             }
        }
 
@@ -101,8 +96,7 @@ namespace parse {
         std::string path;
         bool inited = false;
         std::ofstream out;
-        std::stringstream line;
-        std::set<custom::custom_type::inner_type> tests;
+        std::set<std::string> tests;
     } inline cache;
 
 
@@ -335,6 +329,15 @@ namespace parse {
             return code->size() - l;
         }
 
+        init_struct_cession(what, std::string from_any_to_str(custom::custom_type::inner_type &what))
+        enable_all_types(from_any_to_str, what)
+        close_cession(T)
+        std::string from_any_to_str(custom::custom_type::inner_type &what) {
+            std::stringstream ss;
+            ss << std::get<interval::interval<T>>(what.value()).any().value();
+            return ss.str();
+        }
+
         void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) {
             ast::variables_t _vars = vars;
 
@@ -381,8 +384,11 @@ namespace parse {
                 }
             }
 
-            for (auto &x : _vars)
-                for (const auto &y : x) cache.get_tests_set().insert(y->data);
+            for (auto &x : _vars) {
+                for (const auto &y : x) {
+                    cache.get_tests_set().insert(from_any_to_str(y->data));
+                }
+            }
         }
 #undef sub
     private:
