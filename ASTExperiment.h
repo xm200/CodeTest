@@ -343,9 +343,9 @@ namespace custom {
 namespace ast {
     using variables_t = std::vector<std::vector<custom::custom_type*>>;
     const std::vector<std::string> inline operations =
-        {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
+        {"and", "or", "NOT", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
     enum operations {
-        AND, OR, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
+        AND, OR, NT, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
     };
     struct ast_node {
         ast_node *parent = nullptr;
@@ -356,7 +356,6 @@ namespace ast {
         explicit ast_node(ast_node *p) : parent(p) {}
         void gen(const custom::str_type &orig_s) {
             auto s = erase_spaces(orig_s);
-
 
             if (s.front() == '(' && s.back() == ')') {
                 std::size_t depth = 0;
@@ -377,7 +376,8 @@ namespace ast {
                 if (s[i] == ')') --depth;
                 if (depth == 0) {
                     for (auto j = 0; j < operations.size(); ++j) {
-                        if (s.substr(i, operations[j].size()).extract() == operations[j]) {
+                        if (s.substr(i, operations[j].size()).extract() == operations[j] &&
+                                    !std::isalpha(s[i + operations[j].size()])) {
                             search[j] = i;
                         }
                     }
@@ -389,7 +389,7 @@ namespace ast {
                     l = new ast_node(this);
                     r = new ast_node(this);
                     op = i;
-                    l->gen(s.substr(0, search[i]));
+                    if (op != NT) l->gen(s.substr(0, search[i]));
                     r->gen(s.substr(search[i] + operations[i].size()));
                     return;
                 }
@@ -402,7 +402,9 @@ namespace ast {
 
         }
 
-        static void apply_oper(custom::custom_type::inner_type &a, const custom::custom_type::inner_type &b, const std::size_t op) {
+        static void apply_operator(custom::custom_type::inner_type &a,
+                                   const custom::custom_type::inner_type &b,
+                                   const std::size_t op) {
             switch (op) {
                 case PL: a += b; break;
                 case MN: a -= b; break;
@@ -460,13 +462,21 @@ namespace ast {
                                 out.push_back({{new custom::custom_type}});
                                 if (i.front()->name.empty()) {
                                     *out.back().front() = *j.front();
-                                    apply_oper(out.back().front()->data, i.front()->data, op);
+                                    apply_operator(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
                                     *out.back().front() = *i.front();
-                                    apply_oper(out.back().front()->data, j.front()->data, op);
+                                    apply_operator(out.back().front()->data, j.front()->data, op);
                                 }
                                 break;
+                            }
+                            case NT: {
+                                if (!i.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
+                                out.emplace_back();
+                                for (auto &x : j) {
+                                    auto buf = new custom::custom_type;
+
+                                }
                             }
                             default: {
                                 throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
@@ -569,3 +579,8 @@ namespace ast {
 
 }
 #endif
+// not (a > 3 and b < 4) or (c > 5 and d < 6) {{a > 3; b < 4}; {c > 5; d < 6}}
+//  {{a <= 3; c <= 5}; {a <= 3; d >= 6}; {b >= 4; c <= 5}; {b >= 4; d >= 6}}
+
+// not {{a; b}, {c; d}, {e; f}}
+// {{a, c, e}, {a, d, }}
