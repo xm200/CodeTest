@@ -197,7 +197,6 @@ namespace custom {
         [[nodiscard]] inner_type friend operator*(const inner_type &a, const inner_type &b) { subst_digit_only(multiply, a, b) }
         [[nodiscard]] inner_type friend operator/(const inner_type &a, const inner_type &b) { subst_digit_only(divide, a, b) }
         [[nodiscard]] inner_type friend operator%(const inner_type &a, const inner_type &b) { return mod(a, b); }
-        [[nodiscard]] inner_type friend not_operator(const inner_type &a, const inner_type &b) { subst(nt, a, b) }
 
 #undef subst_digit_only
 #undef subst
@@ -323,13 +322,6 @@ namespace custom {
             checkType(a, b, "%");
             return std::get<interval::interval<typeInt>>(a.value())
                    % std::get<interval::interval<typeInt>>(b.value()).any().value();
-        }
-
-        template<typename T>
-        [[nodiscard]] static inner_type nt(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "!");
-            return std::get<interval::interval<T>>(a.value()).invert()
-                   * std::get<interval::interval<T>>(b.value());
         }
     };
 
@@ -458,6 +450,15 @@ namespace ast {
             }
         }
 
+        init_struct_cession(a,
+            static custom::custom_type::inner_type sub_and(const custom::custom_type::inner_type &a,
+                    const custom::custom_type::inner_type &b))
+            enable_all_types(sub_and, a, b)
+        close_cession(T)
+        static custom::custom_type::inner_type sub_and(const custom::custom_type::inner_type &a,
+            const custom::custom_type::inner_type &b) {
+            return std::get<interval::interval<T>>(a.value()) * std::get<interval::interval<T>>(b.value());
+        }
         [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
             variables_t out;
             if (data.has_value()) {
@@ -510,11 +511,45 @@ namespace ast {
                         }
                         break;
                     }
+                    case AND: {
+                        for (auto &i : ld) {
+                            for (auto &j : rd) {
+                                out.emplace_back();
+                                std::size_t i1 = 0, i2 = 0;
+                                while (i1 < i.size() && i2 < j.size()) {
+                                    if (i[i1]->name == j[i2]->name) {
+                                        out.back().push_back(new custom::custom_type);
+                                        *out.back().back() = *i[i1];
+                                        out.back().back()->data = sub_and(i[i1]->data, j[i2]->data);
+                                        ++i1;
+                                        ++i2;
+                                    }
+                                    else if (i[i1]->name < j[i2]->name) {
+                                        out.back().push_back(i[i1]);
+                                        ++i1;
+                                    }
+                                    else {
+                                        out.back().push_back(j[i2]);
+                                        ++i2;
+                                    }
+                                }
+                                while (i1 < i.size()) {
+                                    out.back().push_back(i[i1]);
+                                    ++i1;
+                                }
+                                while (i2 < j.size()) {
+                                    out.back().push_back(j[i2]);
+                                    ++i2;
+                                }
+                            }
+                        }
+                        break;
+                    }
                     case NT: {
                         if (!ld.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
                         out.emplace_back();
                         for (auto &x : rd) {
-                            auto buf = new custom::custom_type;
+                            // todo
 
                         }
                         break;

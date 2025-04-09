@@ -331,8 +331,10 @@ namespace parse {
         enable_all_types(from_any_to_str, what)
         close_cession(T)
         std::string from_any_to_str(custom::custom_type::inner_type &what) {
+            auto x = std::get<interval::interval<T>>(what.value()).any();
+            if (x == std::nullopt) return "";
             std::stringstream ss;
-            ss << std::get<interval::interval<T>>(what.value()).any().value();
+            ss << x.value();
             return ss.str();
         }
 
