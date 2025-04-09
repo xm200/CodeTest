@@ -197,6 +197,7 @@ namespace custom {
         [[nodiscard]] inner_type friend operator*(const inner_type &a, const inner_type &b) { subst_digit_only(multiply, a, b) }
         [[nodiscard]] inner_type friend operator/(const inner_type &a, const inner_type &b) { subst_digit_only(divide, a, b) }
         [[nodiscard]] inner_type friend operator%(const inner_type &a, const inner_type &b) { return mod(a, b); }
+        [[nodiscard]] inner_type friend not_operator(const inner_type &a, const inner_type &b) { subst(nt, a, b) }
 
 #undef subst_digit_only
 #undef subst
@@ -312,7 +313,7 @@ namespace custom {
         }
 
         template<typename type>
-        [[nodiscard]] static  inner_type divide(const inner_type &a, const inner_type &b) {
+        [[nodiscard]] static inner_type divide(const inner_type &a, const inner_type &b) {
             checkType(a, b, "/");
             return std::get<interval::interval<type>>(a.value())
                    / std::get<interval::interval<type>>(b.value()).any().value();
@@ -323,7 +324,15 @@ namespace custom {
             return std::get<interval::interval<typeInt>>(a.value())
                    % std::get<interval::interval<typeInt>>(b.value()).any().value();
         }
+
+        template<typename T>
+        [[nodiscard]] static inner_type nt(const inner_type &a, const inner_type &b) {
+            checkType(a, b, "!");
+            return std::get<interval::interval<T>>(a.value()).invert()
+                   * std::get<interval::interval<T>>(b.value());
+        }
     };
+
 
 
     [[nodiscard]] static short get_in_type(const custom_type::inner_type &d) {
@@ -347,6 +356,18 @@ namespace ast {
     enum operations {
         AND, OR, NT, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
     };
+    inline std::size_t inverse_operator(const std::size_t op) {
+        switch (op) {
+            case MO: return LE;
+            case EQ: return NQ;
+            case NQ: return EQ;
+            case LS: return ME;
+            case ME: return LS;
+            case LE: return MO;
+            default:
+                throw std::runtime_error("Unknown operation");
+        }
+    }
     struct ast_node {
         ast_node *parent = nullptr;
         ast_node *l = nullptr, *r = nullptr;
@@ -421,6 +442,8 @@ namespace ast {
             }
         };
 
+
+
         static void not_operator(const variables_t &orig, variables_t &out, const std::size_t ind = 0) {
             static std::vector<custom::custom_type*> stack;
             if (ind == orig.size()) {
@@ -428,7 +451,8 @@ namespace ast {
                 return;
             }
             for (auto &i : orig[ind]) {
-                stack.push_back(i);
+                stack.push_back(new custom::custom_type);
+                *stack.back() = *i;
                 not_operator(orig, out, ind + 1);
                 stack.pop_back();
             }
@@ -452,7 +476,8 @@ namespace ast {
                 }
             }
             else {
-                auto ld = l->get_variables(orig), rd = r->get_variables(orig);
+                variables_t ld, rd = r->get_variables(orig);
+                if (op != NT) ld = l->get_variables(orig);
                 for (auto &v : ld) std::sort(v.begin(), v.end());
                 for (auto &v : rd) std::sort(v.begin(), v.end());
 
@@ -492,6 +517,7 @@ namespace ast {
                             auto buf = new custom::custom_type;
 
                         }
+                        break;
                     }
                     default: {
                         throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
@@ -583,6 +609,8 @@ namespace ast {
             std::cout << move << " operator " << operations[_root->op] + '\n';
             tree(_root->r, move_new);
         }
+
+
     };
 
     [[nodiscard]] inline ast_node * generate_ast(const custom::str_type &s) {

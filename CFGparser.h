@@ -20,9 +20,7 @@ namespace parse {
         LINUX, MACOS, WIN
     };
 
-    enum operators {
-        LT, GT, LE, GE, EQ, NE, PLE, PWE, DE, ME, DDE, MLE, NOT_OPERATOR
-    };
+
 
     constexpr short get_os() {
 #if defined(__linux__)
@@ -327,17 +325,6 @@ namespace parse {
             const size_t block_spaces = get_spaces(code->operator[](l));
             for (size_t i = l; i < code->size(); ++i) if (get_spaces(code->operator[](i)) < block_spaces) return i - l;
             return code->size() - l;
-        }
-
-        std::size_t abc(std::size_t op) {
-            switch (op) {
-                case EQ: return NE;
-                case NE: return EQ;
-                case LT: return GE;
-                case GE: return LT;
-                case GT: return LE;
-                case LE: return GT;
-            }
         }
 
         init_struct_cession(what, std::string from_any_to_str(custom::custom_type::inner_type &what))

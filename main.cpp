@@ -25,6 +25,9 @@ static int get_attr(const std::string &val) {
 }
 
 int main(const int argc, char *argv[]) {
+#if defined(DEBUG_MODE)
+    std::cout << "You now in debug mode" << std::endl;
+#endif
     if (argc == 1 || (argc == 2 && argv[1] == std::string_view("--help"))) {
         help("arguments are needed");
     }

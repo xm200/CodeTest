@@ -6,7 +6,7 @@ add_compile_definitions(typeFloat=long\ double)
 add_compile_definitions(VERBOSE)
 
 set(CMAKE_CXX_STANDARD 17)
-option(DEBUG "Provide debug mode" OFF)
+option(DEBUG "Provide debug mode" ON)
 
 if (DEBUG)
     add_executable(codetestDebug main.cpp interval.h ASTExperiment.h CFGparser.h)
