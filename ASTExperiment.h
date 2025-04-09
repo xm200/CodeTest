@@ -409,8 +409,12 @@ namespace ast {
                 case PW: a *= b; break;
                 case DL: a /= b; break;
                 case PS: a %= b; break;
-                case EQ: a = (a == b); break;
+                case EQ: a = a == b; break;
                 case NQ: a = a != b; break;
+                case MO: a = a > b; break;
+                case ME: a = a >= b; break;
+                case LS: a = a < b; break;
+                case LE: a = a <= b; break;
                 default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
             }
         };
@@ -446,7 +450,11 @@ namespace ast {
                             case DL:
                             case PS:
                             case EQ:
-                            case NQ: {
+                            case NQ:
+                            case MO:
+                            case ME:
+                            case LS:
+                            case LE: {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
                                 out.push_back({{new custom::custom_type}});
