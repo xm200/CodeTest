@@ -343,7 +343,7 @@ namespace custom {
 namespace ast {
     using variables_t = std::vector<std::vector<custom::custom_type*>>;
     const std::vector<std::string> inline operations =
-        {"and", "or", "NOT", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
+        {"and", "or", "not", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
     enum operations {
         AND, OR, NT, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
     };
@@ -421,6 +421,19 @@ namespace ast {
             }
         };
 
+        static void not_operator(const variables_t &orig, variables_t &out, const std::size_t ind = 0) {
+            static std::vector<custom::custom_type*> stack;
+            if (ind == orig.size()) {
+                out.push_back(stack);
+                return;
+            }
+            for (auto &i : orig[ind]) {
+                stack.push_back(i);
+                not_operator(orig, out, ind + 1);
+                stack.pop_back();
+            }
+        }
+
         [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
             variables_t out;
             if (data.has_value()) {
@@ -443,20 +456,20 @@ namespace ast {
                 for (auto &v : ld) std::sort(v.begin(), v.end());
                 for (auto &v : rd) std::sort(v.begin(), v.end());
 
-                for (auto &i : ld) {
-                    for (auto &j : rd) {
-                        switch (op) {
-                            case PL:
-                            case MN:
-                            case PW:
-                            case DL:
-                            case PS:
-                            case EQ:
-                            case NQ:
-                            case MO:
-                            case ME:
-                            case LS:
-                            case LE: {
+                switch (op) {
+                    case PL:
+                    case MN:
+                    case PW:
+                    case DL:
+                    case PS:
+                    case EQ:
+                    case NQ:
+                    case MO:
+                    case ME:
+                    case LS:
+                    case LE: {
+                        for (auto &i : ld) {
+                            for (auto &j : rd) {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
                                 out.push_back({{new custom::custom_type}});
@@ -468,22 +481,23 @@ namespace ast {
                                     *out.back().front() = *i.front();
                                     apply_operator(out.back().front()->data, j.front()->data, op);
                                 }
-                                break;
-                            }
-                            case NT: {
-                                if (!i.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
-                                out.emplace_back();
-                                for (auto &x : j) {
-                                    auto buf = new custom::custom_type;
-
-                                }
-                            }
-                            default: {
-                                throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
                             }
                         }
+                        break;
+                    }
+                    case NT: {
+                        if (!ld.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
+                        out.emplace_back();
+                        for (auto &x : rd) {
+                            auto buf = new custom::custom_type;
+
+                        }
+                    }
+                    default: {
+                        throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
                     }
                 }
+
             }
             return out;
         }
