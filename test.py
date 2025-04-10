@@ -1,6 +1,4 @@
 c = int(input())
-
-if c > 3 and c < 4:
-    print("aboba")
-if c > 5 and c < 7:
-    print("aboba")
+d = int(input())
+if c < 3 and d > 4 and c > 0 and d < 100:
+    print("amogus")

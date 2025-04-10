@@ -27,4 +27,6 @@
     --help, to see this help
     -B / --bfs: use BFS (default using DFS algo)
     -D / --dfs: use DFS
-
+    -v / --verbose: print additional info
+    -o path / --output path: path to output file 
+            (default using output.txt in dir with file for debug)
