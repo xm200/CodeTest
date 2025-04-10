@@ -36,6 +36,12 @@ enable_string(name, __VA_ARGS__)
 
 
 namespace custom {
+
+    template<typename type>
+    [[maybe_unused]] [[nodiscard]] bool dereferenced_sort_comparator(const type *_a, const type *_b) {
+        return *_a < *_b;
+    }
+
     template<typename S>
     struct vec_line {
         const S *vec = nullptr;
@@ -479,8 +485,10 @@ namespace ast {
             else {
                 variables_t ld, rd = r->get_variables(orig);
                 if (op != NT) ld = l->get_variables(orig);
-                for (auto &v : ld) std::sort(v.begin(), v.end());
-                for (auto &v : rd) std::sort(v.begin(), v.end());
+                for (auto &v : ld) std::sort(v.begin(), v.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
+                for (auto &v : rd) std::sort(v.begin(), v.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
 
                 switch (op) {
                     case PL:
@@ -514,6 +522,10 @@ namespace ast {
                     case AND: {
                         for (auto &i : ld) {
                             for (auto &j : rd) {
+                                std::sort(i.begin(), i.end(),
+                                    custom::dereferenced_sort_comparator<custom::custom_type>);
+                                std::sort(j.begin(), j.end(),
+                                    custom::dereferenced_sort_comparator<custom::custom_type>);
                                 out.emplace_back();
                                 std::size_t i1 = 0, i2 = 0;
                                 while (i1 < i.size() && i2 < j.size()) {
