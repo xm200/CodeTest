@@ -582,7 +582,7 @@ namespace interval {
 
             // check empty data
             if (empty()) {
-                out += "*Empty*\n";
+                out += "*Empty*";
                 return out;
             }
 
@@ -680,7 +680,7 @@ namespace interval {
         [[nodiscard]] std::optional<T2> get_any_for_number // for degrees
                 (const std::set<std::pair<std::pair<int, T2>, std::pair<int, T2>>> &a) const {
             for (auto &i : a) {
-                if (i.first.first == 0 && i.second.first == 2) return {}; // (-INF; +INF) -> 0
+                if (i.first.first == 0 && i.second.first == 2) return T2{}; // (-INF; +INF) -> 0
                 // i.second.second - 1 < i.second.second and i.first.second + 1 > i.first.second
                 // are need for detect overflow
                 if (i.first.first == 0 && i.second.first == 1 && i.second.second - 1 < i.second.second)
@@ -725,7 +725,7 @@ namespace interval {
                 const std::function<std::optional<T>(const T&)> &x_PLUS_INF,
                 const std::function<std::optional<T>(const T&, const T&)> &x_y) {
             for (auto &i : a) {
-                if (i.first.first == 0 && i.second.first == 2) return {}; // (-INF; +INF) -> 0
+                if (i.first.first == 0 && i.second.first == 2) return T{}; // (-INF; +INF) -> 0
                 if (i.first.first == 0 && i.second.first == 1)
                     if (auto x = MINUS_INF_x(i.second.second); x.has_value()) return x; // (-INF; x)
                 if (i.first.first == 1 && i.second.first == 2)

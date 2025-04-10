@@ -10,6 +10,7 @@
 #include <vector>
 #include <variant>
 #include <functional>
+#include <algorithm>
 #include <iostream>
 
 #define init_cession(a, ...) \
@@ -35,6 +36,12 @@ enable_string(name, __VA_ARGS__)
 
 
 namespace custom {
+
+    template<typename type>
+    [[maybe_unused]] [[nodiscard]] bool dereferenced_sort_comparator(const type *_a, const type *_b) {
+        return *_a < *_b;
+    }
+
     template<typename S>
     struct vec_line {
         const S *vec = nullptr;
@@ -229,8 +236,8 @@ namespace custom {
                 const std::string &n) {
             checkType(a, b, n);
             interval::interval<T> buf;
-            it(buf, a);
-            return buf * std::get<interval::interval<T>>(b.value());
+            it(buf, b);
+            return buf * std::get<interval::interval<T>>(a.value());
         }
 
         void checkType(const custom_type &a, const std::string &name_op) const {
@@ -311,7 +318,7 @@ namespace custom {
         }
 
         template<typename type>
-        [[nodiscard]] static  inner_type divide(const inner_type &a, const inner_type &b) {
+        [[nodiscard]] static inner_type divide(const inner_type &a, const inner_type &b) {
             checkType(a, b, "/");
             return std::get<interval::interval<type>>(a.value())
                    / std::get<interval::interval<type>>(b.value()).any().value();
@@ -323,6 +330,7 @@ namespace custom {
                    % std::get<interval::interval<typeInt>>(b.value()).any().value();
         }
     };
+
 
 
     [[nodiscard]] static short get_in_type(const custom_type::inner_type &d) {
@@ -340,22 +348,33 @@ namespace custom {
 
 
 namespace ast {
-    using variables_t = std::vector<std::vector<custom::custom_type>>;
+    using variables_t = std::vector<std::vector<custom::custom_type*>>;
     const std::vector<std::string> inline operations =
-        {"and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
+        {"and", "or", "not", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
     enum operations {
-        AND, OR, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
+        AND, OR, NT, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
     };
+    inline std::size_t inverse_operator(const std::size_t op) {
+        switch (op) {
+            case MO: return LE;
+            case EQ: return NQ;
+            case NQ: return EQ;
+            case LS: return ME;
+            case ME: return LS;
+            case LE: return MO;
+            default:
+                throw std::runtime_error("Unknown operation");
+        }
+    }
     struct ast_node {
         ast_node *parent = nullptr;
         ast_node *l = nullptr, *r = nullptr;
-        std::optional<custom::custom_type> data{};
+        std::optional<custom::custom_type*> data{};
         std::size_t op = -1;
 
         explicit ast_node(ast_node *p) : parent(p) {}
         void gen(const custom::str_type &orig_s) {
             auto s = erase_spaces(orig_s);
-
 
             if (s.front() == '(' && s.back() == ')') {
                 std::size_t depth = 0;
@@ -376,7 +395,8 @@ namespace ast {
                 if (s[i] == ')') --depth;
                 if (depth == 0) {
                     for (auto j = 0; j < operations.size(); ++j) {
-                        if (s.substr(i, operations[j].size()).extract() == operations[j]) {
+                        if (s.substr(i, operations[j].size()).extract() == operations[j] &&
+                                    !std::isalpha(s[i + operations[j].size()])) {
                             search[j] = i;
                         }
                     }
@@ -388,7 +408,7 @@ namespace ast {
                     l = new ast_node(this);
                     r = new ast_node(this);
                     op = i;
-                    l->gen(s.substr(0, search[i]));
+                    if (op != NT) l->gen(s.substr(0, search[i]));
                     r->gen(s.substr(search[i] + operations[i].size()));
                     return;
                 }
@@ -396,20 +416,65 @@ namespace ast {
 
             //no operator found
             const auto type = custom::custom_type::extract_type_from_string(s.extract());
-            data = dereference_cast(s.extract(), type);
+            data = new custom::custom_type;
+            *data.value() = (dereference_cast(s.extract(), type));
 
         }
 
+        static void apply_operator(custom::custom_type::inner_type &a,
+                                   const custom::custom_type::inner_type &b,
+                                   const std::size_t op) {
+            switch (op) {
+                case PL: a += b; break;
+                case MN: a -= b; break;
+                case PW: a *= b; break;
+                case DL: a /= b; break;
+                case PS: a %= b; break;
+                case EQ: a = a == b; break;
+                case NQ: a = a != b; break;
+                case MO: a = a > b; break;
+                case ME: a = a >= b; break;
+                case LS: a = a < b; break;
+                case LE: a = a <= b; break;
+                default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
+            }
+        };
+
+
+
+        static void not_operator(const variables_t &orig, variables_t &out, const std::size_t ind = 0) {
+            static std::vector<custom::custom_type*> stack;
+            if (ind == orig.size()) {
+                out.push_back(stack);
+                return;
+            }
+            for (auto &i : orig[ind]) {
+                stack.push_back(new custom::custom_type);
+                *stack.back() = *i;
+                not_operator(orig, out, ind + 1);
+                stack.pop_back();
+            }
+        }
+
+        init_struct_cession(a,
+            static custom::custom_type::inner_type sub_and(const custom::custom_type::inner_type &a,
+                    const custom::custom_type::inner_type &b))
+            enable_all_types(sub_and, a, b)
+        close_cession(T)
+        static custom::custom_type::inner_type sub_and(const custom::custom_type::inner_type &a,
+            const custom::custom_type::inner_type &b) {
+            return std::get<interval::interval<T>>(a.value()) * std::get<interval::interval<T>>(b.value());
+        }
         [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
             variables_t out;
             if (data.has_value()) {
                 for (const auto &v : orig) {
-                    if (data.value().name.empty()) {
+                    if (data.value()->name.empty()) {
                         out.push_back({data.value()});
                     }
                     else {
                         for (const auto &i : v) {
-                            if (i.name == data.value().name) {
+                            if (i->name == data.value()->name) {
                                 out.push_back({i});
                                 break;
                             }
@@ -418,44 +483,108 @@ namespace ast {
                 }
             }
             else {
-                auto ld = l->get_variables(orig), rd = r->get_variables(orig);
-                for (auto &v : ld) std::sort(v.begin(), v.end());
-                for (auto &v : rd) std::sort(v.begin(), v.end());
+                variables_t ld, rd = r->get_variables(orig);
+                if (op != NT) ld = l->get_variables(orig);
+                for (auto &v : ld) std::sort(v.begin(), v.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
+                for (auto &v : rd) std::sort(v.begin(), v.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
 
-                auto fun = [](custom::custom_type::inner_type &a,
-                              const custom::custom_type::inner_type &b,
-                              const std::size_t op) {
-                    switch (op) {
-                        case PL: a += b; break;
-                        case MN: a -= b; break;
-                        case PW: a *= b; break;
-                        case DL: a /= b; break;
-                        default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
-                    }
-                };
-                for (auto &i : ld) {
-                    for (auto &j : rd) {
-                        switch (op) {
-                            case PL:
-                            case MN:
-                            case PW:
-                            case DL: {
+                switch (op) {
+                    case PL:
+                    case MN:
+                    case PW:
+                    case DL:
+                    case PS:
+                    case EQ:
+                    case NQ:
+                    case MO:
+                    case ME:
+                    case LS:
+                    case LE: {
+                        for (auto &i : ld) {
+                            for (auto &j : rd) {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
-                                if (i.front().name.empty()) {
-                                    out.push_back({j});
-                                    fun(out.back().front().data, i.front().data, op);
+                                out.push_back({{new custom::custom_type}});
+                                if (i.front()->name.empty()) {
+                                    *out.back().front() = *j.front();
+                                    apply_operator(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
-                                    out.push_back({i});
-                                    fun(out.back().front().data, j.front().data, op);
+                                    *out.back().front() = *i.front();
+                                    apply_operator(out.back().front()->data, j.front()->data, op);
                                 }
-                                break;
-                            }
-                            default: {
-                                throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
                             }
                         }
+                        break;
+                    }
+                    case AND: {
+                        for (auto &i : ld) {
+                            for (auto &j : rd) {
+                                std::sort(i.begin(), i.end(),
+                                    custom::dereferenced_sort_comparator<custom::custom_type>);
+                                std::sort(j.begin(), j.end(),
+                                    custom::dereferenced_sort_comparator<custom::custom_type>);
+                                out.emplace_back();
+                                std::size_t i1 = 0, i2 = 0;
+                                while (i1 < i.size() && i2 < j.size()) {
+                                    if (i[i1]->name == j[i2]->name) {
+                                        out.back().push_back(new custom::custom_type);
+                                        *out.back().back() = *i[i1];
+                                        out.back().back()->data = sub_and(i[i1]->data, j[i2]->data);
+                                        ++i1;
+                                        ++i2;
+                                    }
+                                    else if (i[i1]->name < j[i2]->name) {
+                                        out.back().push_back(i[i1]);
+                                        ++i1;
+                                    }
+                                    else {
+                                        out.back().push_back(j[i2]);
+                                        ++i2;
+                                    }
+                                }
+                                while (i1 < i.size()) {
+                                    out.back().push_back(i[i1]);
+                                    ++i1;
+                                }
+                                while (i2 < j.size()) {
+                                    out.back().push_back(j[i2]);
+                                    ++i2;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    case NT: {
+                        if (!ld.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
+                        out.emplace_back();
+                        for (auto &x : rd) {
+                            // todo
+
+                        }
+                        break;
+                    }
+                    case OR: {
+                        std::set<std::vector<custom::custom_type*>> buf_out;
+                        for (auto &i : ld) {
+                            std::sort(i.begin(), i.end(),
+                                custom::dereferenced_sort_comparator<custom::custom_type>);
+                            buf_out.insert(i);
+                        }
+                        for (auto &i : rd) {
+                            std::sort(i.begin(), i.end(),
+                                custom::dereferenced_sort_comparator<custom::custom_type>);
+                            buf_out.insert(i);
+                        }
+                        for (auto &i : buf_out) {
+                            out.push_back(i);
+                        }
+                        break;
+                    }
+                    default: {
+                        throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
                     }
                 }
 
@@ -463,7 +592,24 @@ namespace ast {
             return out;
         }
 
-        void tree() {
+        static void cmpPush(variables_t &write, const variables_t &orig) {
+            auto buf = write; // todo cmpPush
+            write = orig;
+            for (auto &i : write) {
+                /// a < 3 || a > 4
+                /// {{a; b < 3}; {a; b > 4}}
+                for (auto &j : buf) {
+                    auto buf_index = 0;
+                    for (auto &k : i) {
+                        if (k->name == j[buf_index]->name) {
+                            k = j[buf_index++];
+                        }
+                    }
+                }
+            }
+        }
+
+        void tree() const {
             const std::string s;
             tree(this, s);
             std::cout << std::flush;
@@ -510,10 +656,10 @@ namespace ast {
             }
             else std::cout << std::get<interval::interval<T>>(v.data.value()).print();
         }
-        static void tree(ast_node *_root, const std::string &move) {
+        static void tree(const ast_node *_root, const std::string &move) {
             if (_root->data != std::nullopt) {
                 std::cout << move << ' ';
-                sub_print(_root->data.value());
+                sub_print(*_root->data.value());
                 std::cout << '\n';
                 return;
             }
@@ -527,6 +673,8 @@ namespace ast {
             std::cout << move << " operator " << operations[_root->op] + '\n';
             tree(_root->r, move_new);
         }
+
+
     };
 
     [[nodiscard]] inline ast_node * generate_ast(const custom::str_type &s) {
@@ -536,11 +684,9 @@ namespace ast {
     }
 
 }
-#undef init_cession
-#undef init_struct_cession
-#undef enable_all_types
-#undef enable_int
-#undef enable_float
-#undef enable_string
-#undef close_cession
 #endif
+// not (a > 3 and b < 4) or (c > 5 and d < 6) {{a > 3; b < 4}; {c > 5; d < 6}}
+//  {{a <= 3; c <= 5}; {a <= 3; d >= 6}; {b >= 4; c <= 5}; {b >= 4; d >= 6}}
+
+// not {{a; b}, {c; d}, {e; f}}
+// {{a, c, e}, {a, d, }}
