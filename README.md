@@ -1,32 +1,26 @@
-*CodeTest* is used for *Code Testing*
+**Необходимо предустановить**
+---
 
-**Requirements:**
+    cmake, ninja, gcc, g++
 
-    cmake, make, git
+**Установка**
+---
 
-**Building:**
+    git clone https://github.com/xm200/CodeTest && cd CodeTest && cmake -G "Ninja" . && cmake --build .
 
-    git clone https://github.com/CodeTest 
-    cd CodeTest 
-    cmake .
-    make
-    sudo make install
-
-**Usage:**
-
-*Linux/Macos*
+**Использование**:
+---
+***Linux/Macos***
 
     ./CodeTest [attributes] path_to_file
 
-*Windows*
+***Windows***
 
     .\CodeTest.exe [attributes] path_to_file
 
-**Main attributes**:
+***Main attributes***:
 
     --help, to see this help
     -B / --bfs: use BFS (default using DFS algo)
     -D / --dfs: use DFS
-    -v / --verbose: print additional info
-    -o path / --output path: path to output file 
-            (default using output.txt in dir with file for debug)
+

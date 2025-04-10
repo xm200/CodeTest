@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
+
 project(CodeTest)
 
 add_compile_definitions(typeInt=long\ long)
@@ -18,5 +19,7 @@ unset(DEBUG CACHE)
 add_executable(codetest main.cpp interval.h ASTExperiment.h CFGparser.h)
 
 add_executable(test_lib_interval interval.cpp interval.h)
+
+target_link_libraries(codetest -static)
 
 install(TARGETS codetest DESTINATION bin)
