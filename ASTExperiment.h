@@ -106,7 +106,7 @@ namespace custom {
     };
 
     std::vector<std::string> inline operations =
-        {"=", "and", "or", "==", "!=", ">", "<", ">=", "<=", "+", "-", "//", "%"};
+        {"=", "and", "or", "==", "!=",  ">=", "<=", ">", "<", "+", "-", "//", "%"};
 
     using str_type = vec_line<std::string>;
 
@@ -350,9 +350,9 @@ namespace custom {
 namespace ast {
     using variables_t = std::vector<std::vector<custom::custom_type*>>;
     const std::vector<std::string> inline operations =
-        {"and", "or", "not", "==", "!=", ">", "<", ">=", "<=", "+", "-", "*", "//", "%"};
+        {"and", "or", "not", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "//", "%"};
     enum operations {
-        AND, OR, NT, EQ, NQ, MO, LS, ME, LE, PL, MN, PW, DL, PS
+        AND, OR, NT, EQ, NQ, ME, LE, MO, LS, PL, MN, PW, DL, PS
     };
     inline std::size_t inverse_operator(const std::size_t op) {
         switch (op) {
@@ -366,6 +366,7 @@ namespace ast {
                 throw std::runtime_error("Unknown operation");
         }
     }
+
     struct ast_node {
         ast_node *parent = nullptr;
         ast_node *l = nullptr, *r = nullptr;
@@ -438,14 +439,27 @@ namespace ast {
                 case LE: a = a <= b; break;
                 default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
             }
-        };
+        }
 
-
+        init_struct_cession(a.data, static custom::custom_type not_reverse(const custom::custom_type &a))
+            enable_all_types(not_reverse, a)
+        close_cession(T)
+        static custom::custom_type not_reverse(const custom::custom_type &a) {
+            auto out = a;
+            out.data = std::get<interval::interval<T>>(a.data.value()).invert();
+            return out;
+        }
 
         static void not_operator(const variables_t &orig, variables_t &out, const std::size_t ind = 0) {
             static std::vector<custom::custom_type*> stack;
             if (ind == orig.size()) {
-                out.push_back(stack);
+                out.emplace_back();
+                for (const auto &i : stack) {
+                    out.back().push_back(new custom::custom_type);
+                    *out.back().back() = not_reverse(*i);
+                }
+                std::sort(out.back().begin(), out.back().end(),
+                    custom::dereferenced_sort_comparator<custom::custom_type>);
                 return;
             }
             for (auto &i : orig[ind]) {
@@ -519,6 +533,14 @@ namespace ast {
                         }
                         break;
                     }
+                    case NT: {
+                        if (!ld.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
+                        not_operator(rd, out);
+                        cmpPush(out, orig);
+                        ld = orig;
+                        rd = out;
+                        out.clear();
+                    }
                     case AND: {
                         for (auto &i : ld) {
                             for (auto &j : rd) {
@@ -557,15 +579,6 @@ namespace ast {
                         }
                         break;
                     }
-                    case NT: {
-                        if (!ld.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
-                        out.emplace_back();
-                        for (auto &x : rd) {
-                            // todo
-
-                        }
-                        break;
-                    }
                     case OR: {
                         std::set<std::vector<custom::custom_type*>> buf_out;
                         for (auto &i : ld) {
@@ -601,7 +614,7 @@ namespace ast {
                 for (auto &j : buf) {
                     auto buf_index = 0;
                     for (auto &k : i) {
-                        if (k->name == j[buf_index]->name) {
+                        if (buf_index < j.size() && k->name == j[buf_index]->name) {
                             k = j[buf_index++];
                         }
                     }
