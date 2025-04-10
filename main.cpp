@@ -4,15 +4,19 @@
 #include <iostream>
 
 bool m = true;
+bool v = false;
+std::string output_file;
 
 enum attributes {
-    HELP, BFS, DFS, UNKNOWN_ATTR
+    HELP, BFS, DFS, VERBOSE, OUTPUT, UNKNOWN_ATTR
 };
 
 static int get_attr(const std::string &val) {
     if (val == "help") return HELP;
     if (val == "bfs") return BFS;
     if (val == "dfs") return DFS;
+    if (val == "verbose") return VERBOSE;
+    if (val == "output") return OUTPUT;
     return UNKNOWN_ATTR;
 }
 
@@ -20,11 +24,17 @@ static int get_attr(const std::string &val) {
     std::cout << "usage: CodeTest [attributes] path_to_file\n";
     std::cout << "option -B / --bfs: use BFS (default using DFS algo)\n";
     std::cout << "option -D / --dfs: use DFS \n";
+    std::cout << "option -v / --verbose: print additional info \n";
+    std::cout <<
+        "option -o path / --output path: path to output file (default using output.txt in dir with file for debug) \n";
     std::cout << std::flush;
     throw std::runtime_error(s);
 }
 
 int main(const int argc, char *argv[]) {
+#if defined(DEBUG_MODE)
+    if (v) std::cout << "You now in debug mode" << std::endl;
+#endif
     if (argc == 1 || (argc == 2 && argv[1] == std::string_view("--help"))) {
         help("arguments are needed");
     }
@@ -41,6 +51,13 @@ int main(const int argc, char *argv[]) {
                 case DFS:
                     m = true;
                     break;
+                case VERBOSE:
+                    v = true;
+                    break;
+                case OUTPUT:
+                    output_file = argv[++i];
+                    if (i == argc - 1) help("you need to write input file");
+                    break;
                 default:
                     help("unknown attribute: " + arg);
             }
@@ -56,6 +73,14 @@ int main(const int argc, char *argv[]) {
                     m = true;
                     break;
                 }
+                case 'v': {
+                    v = true;
+                    break;
+                }
+                case 'o':
+                    output_file = argv[++i];
+                    if (i == argc - 1) help("you need to write input file");
+                    break;
                 default: {
                     help("unrecognized option: " + arg);
                 }
@@ -71,7 +96,7 @@ int main(const int argc, char *argv[]) {
 
     const std::string path = argv[argc - 1];
 
-    parse::parser p(parse::read_file(path), m);
+    parse::parser p(parse::read_file(path, v, output_file), m, v);
     p.parse();
     p.tree();
 

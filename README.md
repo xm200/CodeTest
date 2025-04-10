@@ -1,6 +1,18 @@
 *CodeTest* is used for *Code Testing*
 
-**Usage**:
+**Requirements:**
+
+    cmake, make, git
+
+**Building:**
+
+    git clone https://github.com/CodeTest 
+    cd CodeTest 
+    cmake .
+    make
+    sudo make install
+
+**Usage:**
 
 *Linux/Macos*
 
@@ -15,4 +27,6 @@
     --help, to see this help
     -B / --bfs: use BFS (default using DFS algo)
     -D / --dfs: use DFS
-
+    -v / --verbose: print additional info
+    -o path / --output path: path to output file 
+            (default using output.txt in dir with file for debug)

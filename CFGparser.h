@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 #include <iostream>
+#include <set>
 #include "ASTExperiment.h"
 
 
@@ -19,9 +20,7 @@ namespace parse {
         LINUX, MACOS, WIN
     };
 
-    enum operators {
-        LT, GT, LE, GE, EQ, NE, PLE, PWE, DE, ME, DDE, MLE, NOT_OPERATOR
-    };
+
 
     constexpr short get_os() {
 #if defined(__linux__)
@@ -34,7 +33,8 @@ namespace parse {
     }
 
     struct cache_t {
-        void init(const std::string &way) {
+        void init(const std::string &way, const bool v, const std::string &output_file) {
+            verbose = v;
 #if defined(DEBUG_MODE)
             if (inited) {
                 if (way + '/' == path || way == path || way + '\\' == path) return;
@@ -48,7 +48,9 @@ namespace parse {
             else if constexpr (get_os() == LINUX || get_os() == MACOS) path = way + '/';
                 // ReSharper disable once CppDFAUnreachableCode
             else path = way + '\\';
-
+            if (output_file.empty()) out_path = path + "output.txt";
+            else out_path = output_file;
+            out.open(out_path);
                 // ReSharper disable once CppDFAUnreachableCode
                 // ReSharper disable once CppRedundantBooleanExpressionArgument
             if constexpr (get_os() == LINUX || get_os() == MACOS) path += "cache/";
@@ -58,6 +60,8 @@ namespace parse {
             inited = true;
         }
 
+        std::ofstream& write_path() { return out; }
+
         ~cache_t() {
             if (!inited) return;
 #if !defined(DO_NOT_REMOVE_CACHE)
@@ -66,8 +70,18 @@ namespace parse {
             if constexpr (get_os() == LINUX || get_os() == MACOS) system(("rm -rf " + path).c_str());
                 // ReSharper disable once CppDFAUnreachableCode
             else system(("rd /s /q " + path).c_str()); // Remove dir
+
+            write_to_file();
+
+            if (verbose) std::cout << "generated data had written to " << out_path << std::endl;
+
+            out.close();
+
+
 #endif
         }
+
+        std::set<std::string>& get_tests_set() { return tests; }
 
         const std::string &operator()() const {
 #if defined(DEBUG_MODE)
@@ -76,13 +90,23 @@ namespace parse {
             return path;
         }
 
+       void write_to_file() {
+            for (const auto& it : tests) {
+                if (it.empty()) continue;
+                out << it << '\n';
+            }
+       }
+
     private:
         std::string path;
-        bool inited = false;
+        std::string out_path;
+        bool inited = false, verbose = false;
+        std::ofstream out;
+        std::set<std::string> tests;
     } inline cache;
 
 
-    inline std::vector<std::string> *read_file(const std::string &path) {
+    inline std::vector<std::string> *read_file(const std::string &path, const bool v, const std::string &output_file) {
         std::size_t ind = -1, point = path.size();
         for (auto i = path.size(); i --> 0;) {
             if (point == path.size() && path[i] == '.') point = i;
@@ -92,7 +116,7 @@ namespace parse {
             }
         }
 
-        cache.init(path.substr(0, (ind == -1 ? 0 : ind)));
+        cache.init(path.substr(0, ind == -1 ? 0 : ind), v, output_file);
         file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
 
         std::string buf;
@@ -101,13 +125,12 @@ namespace parse {
         while (std::getline(file, buf)) out->push_back(buf);
         file.close();
 
-#if defined(VERBOSE)
-        std::cout << "path to cache: " << cache() << '\n';
-        std::cout << "file name: " << file_name << '\n';
-        std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
-        std::cout << "code have " << out->size() << " lines\n";
-#endif
-
+        if (v) {
+            std::cout << "path to cache: " << cache() << '\n';
+            std::cout << "file name: " << file_name << '\n';
+            std::cout << "file type: " << (file_type.empty() ? "*none*" : file_type) << '\n';
+            std::cout << "code have " << out->size() << " lines\n";
+        }
         return out;
     }
 
@@ -130,14 +153,18 @@ namespace parse {
     class parser {
         const std::vector<std::string> *code;
     public:
-        explicit parser(const std::vector<std::string> *code_, const bool gm) {
+        explicit parser(const std::vector<std::string> *code_, const bool gm, const bool v) {
             code = code_;
             root = new node_t("root", 0, code->size());
             graph_mode = gm;
+            verbose = v;
         }
 
         void parse() {
-            if (graph_mode) parse(root, {{}});
+            if (graph_mode) {
+                parse(root, {{}});
+                if (verbose) std::cout << '\r';
+            }
             else parse_bfs();
         }
 
@@ -148,67 +175,79 @@ namespace parse {
         }
 
         static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
+            auto check = [](const custom::str_type &s, const std::string_view it) {
+                return s.size() >= it.size() && s.substr(0, it.size()).extract() == (it) &&
+                    (s[it.size()] == ' ' || s[it.size()] == '(');
+            };
             auto ans = orig;
             std::vector<char> boo = {'>', '<', '=', '!'};
             for (int i = 0; i < s.size(); ++i) {
                 switch (s[i]) {
                     case '=': {
                         auto _s = custom::erase_spaces(s.substr(i + 1));
-                        if (_s.substr(0, 4).extract() == "int(" || _s.substr(0, 4).extract() == "int ") {
+
+                        if (check(_s, "int") || check(_s, "float") || check(_s, "input")) {
                             auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<typeInt> buf;
-                            buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
-                            x->data = buf;
+                            x->name = custom::erase_spaces(s.substr(0, i - 1)).extract();
+
+                            if (check(_s, "int")) {
+                                interval::interval<typeInt> buf;
+                                buf.add_interval(interval::minimal<typeInt>(), interval::maximal<typeInt>());
+                                x->data = buf;
+                            }
+
+                            if (check(_s, "float")) {
+                                interval::interval<typeFloat> buf;
+                                buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
+                                x->data = buf;
+                            }
+
+                            if (check(_s, "input")) {
+                                interval::interval<std::string> buf;
+                                buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
+                                x->data = buf;
+                            }
+
                             x->reset_type();
                             for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
+                                bool found = false;
+                                for (auto &k : j) {
+                                    if (k->name == x->name) {
+                                        x->history = {0, k};
+                                        k = x;
+                                        found = true;
+                                    }
+                                }
+                                if (!found)
+                                    j.push_back(x);
                             }
-                            ans.push_back({*x});
                             return ans;
                         }
-                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "float(" || _s.substr(i, 6).extract() == "float ")) {
-                            auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<typeFloat> buf;
-                            buf.add_interval(interval::minimal<typeFloat>(), interval::maximal<typeFloat>());
-                            x->data = buf;
-                            x->reset_type();
-                            for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
-                            }
-                            ans.push_back({*x});
-                            return ans;
-                        }
-                        if (_s.size() >= 6 && (_s.substr(i, 6).extract() == "input(" || _s.substr(i, 6).extract() == "input ")) {
-                            auto *x = new custom::custom_type;
-                            x->name = custom::erase_spaces(_s.substr(0, i - 1)).extract();
-                            interval::interval<std::string> buf;
-                            buf.add_interval(interval::minimal<std::string>(), interval::maximal<std::string>());
-                            x->data = buf;
-                            x->reset_type();
-                            for (auto &j : ans) {
-                                if (j.front().name == x->name) { j.front() = *x; return ans; }
-                            }
-                            ans.push_back({*x});
-                            return ans;
-                        }
+
                         if ((i + 1 < s.size() &&
                                 std::find(boo.begin(), boo.end(), s.extract()[i + 1]) != boo.end()) ||
                             (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
+
                         auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
                         auto buf = root->get_variables(orig);
-                        auto res = buf.front().front();
-                        auto *x = new custom::custom_type;
-                        *x = res;
-                        res.history = std::pair<std::size_t, custom::custom_type*>(0, x);
-                        res.name = x->name;
-                        res.data = x->data;
-                        for (auto &j : ans) {
-                            if (!j.empty() && !res.name.empty() && j.front().name == s.substr(0, i).extract()) { j.front() = res; goto end; }
+
+                        for (auto &var: buf) {
+                            auto res = var.front();
+                            auto *x = new custom::custom_type;
+                            *x = *res;
+                            res->name = custom::erase_spaces(s.substr(0, i)).extract();
+                            res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
+
+                            for (auto &k : ans) {
+                                bool found = false;
+                                for (auto &j : k) {
+                                    if (j->name == custom::erase_spaces(s.substr(0, i)).extract()) { j = res; found = true; break; }
+                                }
+                                if (found) continue;
+                                k.push_back(res);
+                                std::sort(k.begin(), k.end());
+                            }
                         }
-                        ans.back().push_back(res);
-                        end:
                         return ans;
                     }
                     case '+':
@@ -230,7 +269,7 @@ namespace parse {
 
     protected:
         node_t *root;
-        bool graph_mode;
+        bool graph_mode, verbose;
 
         static short get_type(const custom::str_type &buf) {
             for (int i = 0; i < buf.size(); ++i) {
@@ -275,7 +314,7 @@ namespace parse {
                         default:
                             auto buf = code->operator[](i);
                             custom::str_type res(buf);
-                            vars = translate(res, vars);
+                            auto asd = translate(res, vars);
                             break;
                     }
                 }
@@ -299,28 +338,20 @@ namespace parse {
             return code->size() - l;
         }
 
-        template<typename T>
-        void write_to_file(const custom::custom_type &what) {
-            if (!what.data.has_value()) return;
-            std::size_t ind = -1;
-            for (auto i = cache().size(); i --> 0;) {
-                if (cache()[i] == '/' || cache()[i] == '\\') {
-                    ind = i;
-                    break;
-                }
-            }
-
-            std::ofstream out(cache().substr(0, ind));
-
-            if (const auto buf = std::get_if<interval::interval<T>>(&what.data.value()); buf != nullptr)
-                out << buf->any().value();
-
-            out.close();
+        init_struct_cession(what, std::string from_any_to_str(custom::custom_type::inner_type &what))
+        enable_all_types(from_any_to_str, what)
+        close_cession(T)
+        std::string from_any_to_str(custom::custom_type::inner_type &what) {
+            auto x = std::get<interval::interval<T>>(what.value()).any();
+            if (x == std::nullopt) return "";
+            std::stringstream ss;
+            ss << x.value();
+            return ss.str();
         }
 
         void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) {
             ast::variables_t _vars = vars;
-            bool is_end = false;
+
 #if defined(DEBUG_MODE)
             if (node->l >= code->size()) throw
                         std::length_error("Unreachable start limit in function parse()");
@@ -329,6 +360,9 @@ namespace parse {
 #endif
 
             for (auto i = node->l; i < node->l + node->len; ++i) {
+                if (code->operator[](i).empty()) continue;
+                if (verbose) std::cout << '\r' << "line " << i + 1 << " / " << code->size() << std::flush;
+
                 std::string first_word;
                 auto expr = std::stringstream(code->operator[](i));
                 expr >> first_word;
@@ -351,37 +385,22 @@ namespace parse {
                             (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
                         parse(child,  root->get_variables(_vars), depth + 1);
                         i += child->len;
-                        is_end = true;
                         break;
                     }
                     default: {
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
-                        _vars = translate(res, _vars);
+                        auto buffer_vars = translate(res, _vars);
+                        if (!buffer_vars.empty())
+                            _vars = buffer_vars;
                         break;
                     }
                 }
             }
-            if (!is_end) {
-                for (auto &x : _vars) {
-                    for (auto &y : x) {
-                        switch (get_interval_type(y)) {
-                            case custom::custom_type::types::INT: {
-                                write_to_file<typeInt>(y);
-                                break;
-                            }
-                            case custom::custom_type::types::FLOAT: {
-                                write_to_file<typeFloat>(y);
-                                break;
-                            }
-                            case custom::custom_type::types::STRING: {
-                                write_to_file<std::string>(y);
-                                break;
-                            }
-                            default:
-                                break;
-                        }
-                    }
+
+            for (auto &x : _vars) {
+                for (const auto &y : x) {
+                    cache.get_tests_set().insert(from_any_to_str(y->data));
                 }
             }
         }
@@ -415,4 +434,12 @@ namespace parse {
         }
     };
 }
+#undef init_cession
+#undef init_struct_cession
+#undef enable_all_types
+#undef enable_int
+#undef enable_float
+#undef enable_string
+#undef close_cession
+
 #endif //CFG_H
