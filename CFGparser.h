@@ -280,47 +280,6 @@ namespace parse {
             return custom::custom_type::extract_type_from_string(buf.extract());
         };
 
-        void parse_bfs() const noexcept {
-            ast::variables_t vars;
-            std::vector<custom::custom_type> vars_orig;
-            std::queue<std::pair<node_t *, ast::variables_t>> q;
-            q.emplace(root, vars);
-
-            while (!q.empty()) {
-                auto [fst, snd] = q.front();
-                q.pop();
-
-                for (auto i = fst->l; i < fst->l + fst->len; ++i) {
-                    std::string first_word;
-                    auto expr = std::stringstream(code->operator[](i));
-                    expr >> first_word;
-
-                    switch (get_construction_type(first_word)) {
-                        case IF:
-                        case ELIF:
-                        case ELSE:
-                        case FOR:
-                        case WHILE: {
-                            fst->children.push_back(new node_t(
-                                    code->operator[](i).substr(get_spaces(code->operator[](i))),
-                                    i + 1,
-                                    get_code_block(i + 1)));
-                            const custom::str_type buf(code->operator[](i));
-                            auto a = ast::generate_ast(buf);
-                            q.emplace(fst->children.back(), a->get_variables(vars));
-                            i += get_code_block(i + 1);
-                            break;
-                        }
-                        default:
-                            auto buf = code->operator[](i);
-                            custom::str_type res(buf);
-                            auto asd = translate(res, vars);
-                            break;
-                    }
-                }
-            }
-        }
-
         [[ nodiscard ]] static size_t get_spaces(const std::string &buf) {
             size_t spaces = 0;
             for (auto &s : buf) if (s == ' ') ++spaces; else break;
@@ -338,15 +297,64 @@ namespace parse {
             return code->size() - l;
         }
 
-        init_struct_cession(what, std::string from_any_to_str(custom::custom_type::inner_type &what))
+        init_struct_cession(what, std::string static from_any_to_str(custom::custom_type::inner_type &what))
         enable_all_types(from_any_to_str, what)
         close_cession(T)
-        std::string from_any_to_str(custom::custom_type::inner_type &what) {
+        static std::string from_any_to_str(custom::custom_type::inner_type &what) {
             auto x = std::get<interval::interval<T>>(what.value()).any();
             if (x == std::nullopt) return "";
             std::stringstream ss;
             ss << x.value();
             return ss.str();
+        }
+
+        void parse_bfs() const noexcept {
+            ast::variables_t vars = {{}};
+            std::queue<std::pair<node_t *, ast::variables_t>> q;
+            q.emplace(root, vars);
+
+            while (!q.empty()) {
+                auto [fst, snd] = q.front();
+                q.pop();
+
+                for (auto &x : snd) {
+                    for (auto &y : x) {
+                        cache.get_tests_set().insert(from_any_to_str(y->data));
+                    }
+                }
+
+                for (auto i = fst->l; i < fst->l + fst->len; ++i) {
+                    std::string first_word;
+                    auto expr = std::stringstream(code->operator[](i));
+                    expr >> first_word;
+
+                    switch (get_construction_type(first_word)) {
+                        case IF:
+                        case ELIF:
+                        case ELSE:
+                        case FOR:
+                        case WHILE: {
+                            fst->children.push_back(new node_t(
+                                    code->operator[](i).substr(get_spaces(code->operator[](i))),
+                                    i + 1,
+                                    get_code_block(i + 1)));
+                            auto buf = code->operator[](i);
+                            custom::str_type res(buf);
+                            auto a = ast::generate_ast(custom::erase_spaces(res.substr(first_word.size() , buf.size() - first_word.size() - 1)));
+                            q.emplace(fst->children.back(), a->get_variables(snd));
+                            i += get_code_block(i + 1);
+                            break;
+                        }
+                        default:
+                            auto buf = code->operator[](i);
+                            custom::str_type res(buf);
+                            auto buffer_vars = translate(res, snd);
+                            if (!buffer_vars.empty())
+                                snd = buffer_vars;
+                            break;
+                    }
+                }
+            }
         }
 
         void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) {
