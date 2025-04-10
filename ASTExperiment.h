@@ -566,6 +566,23 @@ namespace ast {
                         }
                         break;
                     }
+                    case OR: {
+                        std::set<std::vector<custom::custom_type*>> buf_out;
+                        for (auto &i : ld) {
+                            std::sort(i.begin(), i.end(),
+                                custom::dereferenced_sort_comparator<custom::custom_type>);
+                            buf_out.insert(i);
+                        }
+                        for (auto &i : rd) {
+                            std::sort(i.begin(), i.end(),
+                                custom::dereferenced_sort_comparator<custom::custom_type>);
+                            buf_out.insert(i);
+                        }
+                        for (auto &i : buf_out) {
+                            out.push_back(i);
+                        }
+                        break;
+                    }
                     default: {
                         throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
                     }

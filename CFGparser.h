@@ -383,6 +383,7 @@ namespace parse {
                         custom::str_type buf_fw(first_word); // "else: "
                         const auto root = ast::generate_ast(erase_spaces(buf.substr
                             (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
+                        // root->tree();
                         parse(child,  root->get_variables(_vars), depth + 1);
                         i += child->len;
                         break;

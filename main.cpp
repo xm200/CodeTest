@@ -5,10 +5,11 @@
 
 bool m = true;
 bool v = false;
+bool cfg_print = false;
 std::string output_file;
 
 enum attributes {
-    HELP, BFS, DFS, VERBOSE, OUTPUT, UNKNOWN_ATTR
+    HELP, BFS, DFS, VERBOSE, OUTPUT, CFG_PRINT, UNKNOWN_ATTR
 };
 
 static int get_attr(const std::string &val) {
@@ -17,16 +18,18 @@ static int get_attr(const std::string &val) {
     if (val == "dfs") return DFS;
     if (val == "verbose") return VERBOSE;
     if (val == "output") return OUTPUT;
+    if (val == "cfg") return CFG_PRINT;
     return UNKNOWN_ATTR;
 }
 
 [[noreturn]] void help(const std::string &s) {
     std::cout << "usage: CodeTest [attributes] path_to_file\n";
     std::cout << "option -B / --bfs: use BFS (default using DFS algo)\n";
-    std::cout << "option -D / --dfs: use DFS \n";
-    std::cout << "option -v / --verbose: print additional info \n";
+    std::cout << "option -D / --dfs: use DFS\n";
+    std::cout << "option -v / --verbose: print additional info\n";
     std::cout <<
-        "option -o path / --output path: path to output file (default using output.txt in dir with file for debug) \n";
+        "option -o path / --output path: path to output file (default using output.txt in dir with file for debug)\n";
+    std::cout << "option -C / --cfg: print CFG tree\n";
     std::cout << std::flush;
     throw std::runtime_error(s);
 }
@@ -58,6 +61,9 @@ int main(const int argc, char *argv[]) {
                     output_file = argv[++i];
                     if (i == argc - 1) help("you need to write input file");
                     break;
+                case CFG_PRINT:
+                    cfg_print = true;
+                    break;
                 default:
                     help("unknown attribute: " + arg);
             }
@@ -81,6 +87,9 @@ int main(const int argc, char *argv[]) {
                     output_file = argv[++i];
                     if (i == argc - 1) help("you need to write input file");
                     break;
+                case 'C':
+                    cfg_print = true;
+                    break;
                 default: {
                     help("unrecognized option: " + arg);
                 }
@@ -98,7 +107,9 @@ int main(const int argc, char *argv[]) {
 
     parse::parser p(parse::read_file(path, v, output_file), m, v);
     p.parse();
-    p.tree();
+    if (cfg_print) {
+        p.tree();
+    }
 
     const std::string line = "a > 3 or (a < 4 and b > 5)";
     const std::string abc = "a = 3 * 3 + 123456 % 12345";
