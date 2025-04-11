@@ -479,6 +479,73 @@ namespace ast {
             const custom::custom_type::inner_type &b) {
             return std::get<interval::interval<T>>(a.value()) * std::get<interval::interval<T>>(b.value());
         }
+
+        [[nodiscard]] static variables_t once_not(const variables_t &value, const variables_t &orig) {
+            variables_t out;
+            not_operator(value, out);
+            cmpPush(out, orig);
+            return once_and(orig, out);
+        }
+
+        [[nodiscard]] static variables_t once_and(const variables_t &a, const variables_t &b) {
+            variables_t ld = a, rd = b, out;
+            for (auto &i : ld) {
+                for (auto &j : rd) {
+                    std::sort(i.begin(), i.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
+                    std::sort(j.begin(), j.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
+                    out.emplace_back();
+                    std::size_t i1 = 0, i2 = 0;
+                    while (i1 < i.size() && i2 < j.size()) {
+                        if (i[i1]->name == j[i2]->name) {
+                            out.back().push_back(new custom::custom_type);
+                            *out.back().back() = *i[i1];
+                            out.back().back()->data = sub_and(i[i1]->data, j[i2]->data);
+                            ++i1;
+                            ++i2;
+                        }
+                        else if (i[i1]->name < j[i2]->name) {
+                            out.back().push_back(i[i1]);
+                            ++i1;
+                        }
+                        else {
+                            out.back().push_back(j[i2]);
+                            ++i2;
+                        }
+                    }
+                    while (i1 < i.size()) {
+                        out.back().push_back(i[i1]);
+                        ++i1;
+                    }
+                    while (i2 < j.size()) {
+                        out.back().push_back(j[i2]);
+                        ++i2;
+                    }
+                }
+            }
+            return out;
+        }
+
+        [[nodiscard]] static variables_t once_or(const variables_t &a, const variables_t &b) {
+            variables_t ld = a, rd = b, out;
+            std::set<std::vector<custom::custom_type*>> buf_out;
+            for (auto &i : ld) {
+                std::sort(i.begin(), i.end(),
+                    custom::dereferenced_sort_comparator<custom::custom_type>);
+                buf_out.insert(i);
+            }
+            for (auto &i : rd) {
+                std::sort(i.begin(), i.end(),
+                    custom::dereferenced_sort_comparator<custom::custom_type>);
+                buf_out.insert(i);
+            }
+            for (auto &i : buf_out) {
+                out.push_back(i);
+            }
+            return out;
+        }
+
         [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
             variables_t out;
             if (data.has_value()) {
