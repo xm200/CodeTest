@@ -35,11 +35,11 @@ function CheckInstalled {
         $paths = $temp_path -split " C:"
         if ($paths) {
             foreach ($path in $paths) {
-                [void]$script:paths_to_utilities.Add($path)
+                $script:paths_to_utilities.Add($path)
             }
             return 1
         } else {
-            [void]$script:uninstalled_utilities.Add($path)
+            $script:uninstalled_utilities.Add($utility)
         }
     }
     catch {
@@ -63,11 +63,20 @@ foreach ($util in $script:check_installation) {
     }
     Write-Host "-----------------"
 }
-
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-Set-PSRepository -Name 'PSGallery' -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted
-Install-Module -Name 7Zip4PowerShell -Force
+if (Get-Module -ListAvailable -Name 7Zip4PowerShell) {
+    Write-Host "7Z powershell module installed" -ForegroundColor Blue
+} else {
+    Write-Host ""
+    $ans = Read-Host "7Z powershell module is not intalled. Install it? [Y/N]"
+    if ($ans -eq "Y") {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+        Set-PSRepository -Name 'PSGallery' -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted
+        Install-Module -Name 7Zip4PowerShell -Force
+    } else {
+        Write-Host "Installation canceled by user." -ForegroundColor Red
+    }
+}
 
 
 if ($script:uninstalled_utilities.Count -gt 0) {
@@ -77,7 +86,7 @@ if ($script:uninstalled_utilities.Count -gt 0) {
     if ($answer -eq "Y" ) {
         foreach ($util in $script:uninstalled_utilities) {
             Write-Host ""
-            Write-Host "Installing  $util" -ForegroundColor Blue
+            Write-Host "Installing $util" -ForegroundColor Blue
             Write-Host ""
 
 
@@ -112,6 +121,7 @@ if ($script:uninstalled_utilities.Count -gt 0) {
                         Invoke-WebRequest "http://www.1.m-teacher.ru/files/gcc-14.2.0-no-debug.7z" -OutFile ".\gcc-14.2.0-no-debug.7z"
                         Expand-7Zip -ArchiveFileName ".\gcc-14.2.0-no-debug.7z" -TargetPath ".\gnu"
                         $ProgressPreference = "Continue"
+                        break
                     }
                     catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
