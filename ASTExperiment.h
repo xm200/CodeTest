@@ -454,12 +454,23 @@ namespace ast {
             static std::vector<custom::custom_type*> stack;
             if (ind == orig.size()) {
                 out.emplace_back();
+                std::vector<custom::custom_type *> sub;
                 for (const auto &i : stack) {
-                    out.back().push_back(new custom::custom_type);
-                    *out.back().back() = not_reverse(*i);
+                    sub.push_back(new custom::custom_type);
+                    *sub.back() = not_reverse(*i);
                 }
-                std::sort(out.back().begin(), out.back().end(),
+                std::sort(sub.begin(), sub.end(),
                     custom::dereferenced_sort_comparator<custom::custom_type>);
+                if (sub.empty()) return;
+                out.back().push_back(sub.front());
+                for (auto i = 1; i < sub.size(); ++i) {
+                    if (sub[i]->name != sub[i - 1]->name) {
+                        out.back().push_back(sub[i]);
+                    }
+                    else {
+                        out.back().back()->data = sub_and(sub[i]->data, out.back().back()->data);
+                    }
+                }
                 return;
             }
             for (auto &i : orig[ind]) {
@@ -673,7 +684,7 @@ namespace ast {
         }
 
         static void cmpPush(variables_t &write, const variables_t &orig) {
-            auto buf = write; // todo cmpPush
+            auto buf = write;
             write = orig;
             for (auto &i : write) {
                 /// a < 3 || a > 4

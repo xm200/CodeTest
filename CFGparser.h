@@ -361,12 +361,13 @@ namespace parse {
 
             ast::variables_t else_data;
             for (auto i = node->l; i < node->l + node->len; ++i) {
-                if (code->operator[](i).empty()) continue;
+                if (code->operator[](i).empty() || code->operator[](i)[0] == '#') continue;
                 if (verbose) std::cout << '\r' << "line " << i + 1 << " / " << code->size() << std::flush;
 
                 std::string first_word;
                 auto expr = std::stringstream(code->operator[](i));
                 expr >> first_word;
+                if (first_word.front() == '#') continue;
                 switch (auto fw_type = get_construction_type(first_word)) {
                     case IF:
                     case ELIF:
