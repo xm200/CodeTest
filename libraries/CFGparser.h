@@ -299,7 +299,7 @@ namespace parse {
                         case IF:
                         case ELIF:
                         case ELSE:
-                        case FOR:
+                        // case FOR:
                         case WHILE: {
                             fst->children.push_back(new node_t(
                                     code->operator[](i).substr(get_spaces(code->operator[](i))),
@@ -359,19 +359,20 @@ namespace parse {
                         std::length_error("Unreachable end limit in function parse()");
 #endif
 
+            ast::variables_t else_data;
             for (auto i = node->l; i < node->l + node->len; ++i) {
-                if (code->operator[](i).empty()) continue;
+                if (code->operator[](i).empty() || code->operator[](i)[0] == '#') continue;
                 if (verbose) std::cout << '\r' << "line " << i + 1 << " / " << code->size() << std::flush;
 
                 std::string first_word;
                 auto expr = std::stringstream(code->operator[](i));
                 expr >> first_word;
-
-                switch (get_construction_type(first_word)) {
+                if (first_word.front() == '#') continue;
+                switch (auto fw_type = get_construction_type(first_word)) {
                     case IF:
                     case ELIF:
                     case ELSE:
-                    case FOR:
+                    // case FOR:
                     case WHILE: {
                         auto *child = new node_t(
                                 code->operator[](i).substr(get_spaces(code->operator[](i))),
@@ -381,14 +382,32 @@ namespace parse {
                         custom::str_type buf(code->operator[](i)); // "else: "
                         buf = erase_spaces(buf);
                         custom::str_type buf_fw(first_word); // "else: "
-                        const auto root = ast::generate_ast(erase_spaces(buf.substr
-                            (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
-                        // root->tree();
-                        parse(child,  root->get_variables(_vars), depth + 1);
+                        ast::variables_t buf_vars;
+                        if (fw_type != ELSE) {
+                            const auto root = ast::generate_ast(erase_spaces(buf.substr
+                                (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
+                            // root->tree();
+                            buf_vars = root->get_variables(_vars);
+                        }
+                        if (fw_type == ELSE) {
+                            buf_vars = ast::ast_node::once_not(else_data, _vars);
+                            else_data.clear();
+                        }
+                        else if (fw_type == ELIF) {
+                            auto buf_else_data = ast::ast_node::once_or(buf_vars, else_data);
+                            buf_vars = ast::ast_node::once_and(buf_vars,
+                                ast::ast_node::once_not(else_data, _vars));
+                            else_data = buf_else_data;
+                        }
+                        else {
+                            else_data = buf_vars;
+                        }
+                        parse(child,  buf_vars, depth + 1);
                         i += child->len;
                         break;
                     }
                     default: {
+                        else_data.clear();
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
                         auto buffer_vars = translate(res, _vars);

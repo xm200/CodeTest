@@ -35,9 +35,6 @@ static int get_attr(const std::string &val) {
 }
 
 int main(const int argc, char *argv[]) {
-#if defined(DEBUG_MODE)
-    if (v) std::cout << "You now in debug mode" << std::endl;
-#endif
     if (argc == 1 || (argc == 2 && argv[1] == std::string_view("--help"))) {
         help("arguments are needed");
     }
@@ -104,6 +101,10 @@ int main(const int argc, char *argv[]) {
 
 
     const std::string path = argv[argc - 1];
+
+#if defined(DEBUG_MODE)
+    if (v) std::cout << "You now in debug mode" << std::endl;
+#endif
 
     parse::parser p(parse::read_file(path, v, output_file), m, v);
     p.parse();
