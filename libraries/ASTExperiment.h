@@ -495,7 +495,39 @@ namespace ast {
             variables_t out;
             not_operator(value, out);
             cmpPush(out, orig);
-            return once_and(orig, out);
+            variables_t ld = orig, rd = out;
+            out.clear();
+            for (auto &i : ld) {
+                for (auto &j : rd) {
+                    std::sort(i.begin(), i.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
+                    std::sort(j.begin(), j.end(),
+                        custom::dereferenced_sort_comparator<custom::custom_type>);
+                    out.emplace_back();
+                    std::size_t i1 = 0, i2 = 0;
+                    while (i1 < i.size() && i2 < j.size()) {
+                        if (i[i1]->name == j[i2]->name) {
+                            out.back().push_back(new custom::custom_type);
+                            *out.back().back() = *i[i1];
+                            out.back().back()->data = sub_and(i[i1]->data, j[i2]->data);
+                            ++i1;
+                            ++i2;
+                        }
+                        else if (i[i1]->name < j[i2]->name) {
+                            ++i1;
+                        }
+                        else {
+                            out.back().push_back(j[i2]);
+                            ++i2;
+                        }
+                    }
+                    while (i2 < j.size()) {
+                        out.back().push_back(j[i2]);
+                        ++i2;
+                    }
+                }
+            }
+            return out;
         }
 
         [[nodiscard]] static variables_t once_and(const variables_t &a, const variables_t &b) {
@@ -613,66 +645,13 @@ namespace ast {
                     }
                     case NT: {
                         if (!ld.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
-                        not_operator(rd, out);
-                        cmpPush(out, orig);
-                        ld = orig;
-                        rd = out;
-                        out.clear();
+                        return once_not(rd, orig);
                     }
                     case AND: {
-                        for (auto &i : ld) {
-                            for (auto &j : rd) {
-                                std::sort(i.begin(), i.end(),
-                                    custom::dereferenced_sort_comparator<custom::custom_type>);
-                                std::sort(j.begin(), j.end(),
-                                    custom::dereferenced_sort_comparator<custom::custom_type>);
-                                out.emplace_back();
-                                std::size_t i1 = 0, i2 = 0;
-                                while (i1 < i.size() && i2 < j.size()) {
-                                    if (i[i1]->name == j[i2]->name) {
-                                        out.back().push_back(new custom::custom_type);
-                                        *out.back().back() = *i[i1];
-                                        out.back().back()->data = sub_and(i[i1]->data, j[i2]->data);
-                                        ++i1;
-                                        ++i2;
-                                    }
-                                    else if (i[i1]->name < j[i2]->name) {
-                                        out.back().push_back(i[i1]);
-                                        ++i1;
-                                    }
-                                    else {
-                                        out.back().push_back(j[i2]);
-                                        ++i2;
-                                    }
-                                }
-                                while (i1 < i.size()) {
-                                    out.back().push_back(i[i1]);
-                                    ++i1;
-                                }
-                                while (i2 < j.size()) {
-                                    out.back().push_back(j[i2]);
-                                    ++i2;
-                                }
-                            }
-                        }
-                        break;
+                        return once_and(ld, rd);
                     }
                     case OR: {
-                        std::set<std::vector<custom::custom_type*>> buf_out;
-                        for (auto &i : ld) {
-                            std::sort(i.begin(), i.end(),
-                                custom::dereferenced_sort_comparator<custom::custom_type>);
-                            buf_out.insert(i);
-                        }
-                        for (auto &i : rd) {
-                            std::sort(i.begin(), i.end(),
-                                custom::dereferenced_sort_comparator<custom::custom_type>);
-                            buf_out.insert(i);
-                        }
-                        for (auto &i : buf_out) {
-                            out.push_back(i);
-                        }
-                        break;
+                        return once_or(ld, rd);
                     }
                     default: {
                         throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
