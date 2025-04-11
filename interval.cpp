@@ -45,7 +45,7 @@
                               .--  %
                                   ==        Ð§Ñ ÑÐ¼Ð¾ÑÑÐ¸ÑÑ
 */
-#include "interval.h"
+#include "libraries/interval.h"
 #include <bits/stdc++.h>
 
 int main() {

@@ -1,6 +1,6 @@
-#include "interval.h"
-#include "ASTExperiment.h"
-#include "CFGparser.h"
+#include "libraries/interval.h"
+#include "libraries/ASTExperiment.h"
+#include "libraries/CFGparser.h"
 #include <iostream>
 
 bool m = true;

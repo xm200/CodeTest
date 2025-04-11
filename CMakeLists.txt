@@ -16,9 +16,9 @@ if (DEBUG)
 endif (DEBUG)
 unset(DEBUG CACHE)
 
-add_executable(codetest main.cpp interval.h ASTExperiment.h CFGparser.h)
+add_executable(codetest main.cpp libraries/interval.h libraries/ASTExperiment.h libraries/CFGparser.h)
 
-add_executable(test_lib_interval interval.cpp interval.h)
+add_executable(test_lib_interval interval.cpp libraries/interval.h)
 
 target_link_libraries(codetest -static)
 
