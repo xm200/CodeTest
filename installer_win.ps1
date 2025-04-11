@@ -1,11 +1,11 @@
 Write-Host "------------------------------------------------"
 Write-Host ""
 Write-Host ""
-Write-Host "Здравсвтвуйте! Это скрипт-установщик CodeTest для Windows."
+Write-Host "Hello! It is installer CodeTest for Windows."
 Write-Host ""
-Write-Host "Для установки нужны права администратора"
+Write-Host "You need to have administrator rules for install"
 Write-Host ""
-Write-Host "Необходимо установить:"
+Write-Host "This programs will be installed, if they are not installed yet:"
 Write-Host "    - choco / Chocolatey"
 Write-Host "    - gcc/g++ / GNU Compiler Collection"
 Write-Host "    - cmake / CMake"
@@ -19,7 +19,7 @@ Write-Host ""
 
 
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "Запустите установщик с правами администратора."
+    Write-Host "You need to have administrator rules for install"
     Exit 1
 }
 
@@ -48,47 +48,47 @@ function CheckInstalled {
 
 
 if (CheckInstalled "choco") {
-    Write-Host "Chocolatey установлен" -ForegroundColor Green
+    Write-Host "Chocolatey is installed" -ForegroundColor Green
 } else {
-    Write-Host "Chocolatey не установлен" -ForegroundColor Red
+    Write-Host "Chocolatey is not installed" -ForegroundColor Red
 }
 
 if (CheckInstalled "cmake") {
-    Write-Host "CMake установлен" -ForegroundColor Green
+    Write-Host "CMake is installed" -ForegroundColor Green
 } else {
-    Write-Host "Cmake не установлен" -ForegroundColor Red
+    Write-Host "Cmake is not installed" -ForegroundColor Red
 }
 
 if (CheckInstalled "make") {
-    Write-Host "make установлен" -ForegroundColor Green
+    Write-Host "make is installed" -ForegroundColor Green
 } else {
-    Write-Host "make не установлен" -ForegroundColor Red
+    Write-Host "make is not installed" -ForegroundColor Red
 }
 
 if (CheckInstalled "ninja") {
-    Write-Host "Ninja-build установлен"-ForegroundColor Green
+    Write-Host "Ninja-build is installed"-ForegroundColor Green
 } else {
-    Write-Host "Ninja-build не установлен" -ForegroundColor Red
+    Write-Host "Ninja-build is not installed" -ForegroundColor Red
 }
 
 if (CheckInstalled "gcc") {
-    Write-Host "gcc установлен" -ForegroundColor Green
+    Write-Host "gcc is installed" -ForegroundColor Green
 } else {
-    Write-Host "gcc не установлен" -ForegroundColor Red
+    Write-Host "gcc is not installed" -ForegroundColor Red
 }
 
 if (CheckInstalled "g++") {
-    Write-Host "g++ установлен" -ForegroundColor Green
+    Write-Host "g++ is installed" -ForegroundColor Green
 } else {
-    Write-Host "g++ не установлен" -ForegroundColor Red
+    Write-Host "g++ is not installed" -ForegroundColor Red
 }
 
 
 if ($script:uninstalled_utilities.Count -gt 0) {
     Write-Host ""
-    $answer = Read-Host "Установить их? CodeTest не может быть собран без них. [Д/Н]"
+    $answer = Read-Host "Install it? [Y/N]"
 
-    if ($answer -eq "Д") {
+    if ($answer -eq "Y" ) {
         foreach ($util in $script:uninstalled_utilities) {
             switch ($util) {
                 "choco" {
@@ -101,19 +101,19 @@ if ($script:uninstalled_utilities.Count -gt 0) {
                                 $env:Path += ";$($_.Value)"
                             }
                         }
-                    } catch { Write-Host "Ошибка: $_" -ForegroundColor Red }
+                    } catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
                 "cmake" {
                     try { choco install cmake }
-                    catch { Write-Host "Ошибка: $_" -ForegroundColor Red }
+                    catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
                 "make" {
                     try { choco install make }
-                    catch { Write-Host "Ошибка: $_" -ForegroundColor Red }
+                    catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
                 "ninja" {
                     try { choco install ninja }
-                    catch { Write-Host "Ошибка: $_" -ForegroundColor Red }
+                    catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
             }
         }
