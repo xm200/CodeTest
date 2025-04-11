@@ -1,9 +1,10 @@
+# Banner
 Write-Host "------------------------------------------------"
 Write-Host ""
 Write-Host ""
-Write-Host "Hello! It is installer CodeTest for Windows."
+Write-Host "Welcome! It is CodeTest installer for Windows."
 Write-Host ""
-Write-Host "You need to have administrator rules for install"
+Write-Host "You must have administrator rights for installation" -ForegroundColor Green
 Write-Host ""
 Write-Host "This programs will be installed, if they are not installed yet:"
 Write-Host "    - choco / Chocolatey"
@@ -15,11 +16,11 @@ Write-Host ""
 Write-Host ""
 Write-Host "------------------------------------------------"
 Write-Host ""
-Write-Host ""
 
+# Admin check
 
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "You need to have administrator rules for install"
+    Write-Host "You must have administrator rights for installation." -ForegroundColor Red
     Exit 1
 }
 
@@ -34,11 +35,11 @@ function CheckInstalled {
         $paths = $temp_path -split " C:"
         if ($paths) {
             foreach ($path in $paths) {
-                $script:paths_to_utilities.Add($path)
+                [void]$script:paths_to_utilities.Add($path)
             }
             return 1
         } else {
-            $script:uninstalled_utilities.Add($path)
+            [void]$script:uninstalled_utilities.Add($path)
         }
     }
     catch {
@@ -46,50 +47,40 @@ function CheckInstalled {
     }
 }
 
+# Check installed utilities
 
-if (CheckInstalled "choco") {
-    Write-Host "Chocolatey is installed" -ForegroundColor Green
-} else {
-    Write-Host "Chocolatey is not installed" -ForegroundColor Red
+Write-Host "Started checking installed utilities..."
+Write-Host ""
+
+$script:check_installation = @("choco", "gcc", "g++", "cmake", "ninja", "make")
+
+foreach ($util in $script:check_installation) {
+    Write-Host "Checking $util" -ForegroundColor Cyan
+    if (CheckInstalled $util) {
+        Write-Host "$util installed" -ForegroundColor Green
+    } else {
+        Write-Host "$util is not installed" -ForegroundColor Red
+    }
+    Write-Host "-----------------"
 }
 
-if (CheckInstalled "cmake") {
-    Write-Host "CMake is installed" -ForegroundColor Green
-} else {
-    Write-Host "Cmake is not installed" -ForegroundColor Red
-}
-
-if (CheckInstalled "make") {
-    Write-Host "make is installed" -ForegroundColor Green
-} else {
-    Write-Host "make is not installed" -ForegroundColor Red
-}
-
-if (CheckInstalled "ninja") {
-    Write-Host "Ninja-build is installed"-ForegroundColor Green
-} else {
-    Write-Host "Ninja-build is not installed" -ForegroundColor Red
-}
-
-if (CheckInstalled "gcc") {
-    Write-Host "gcc is installed" -ForegroundColor Green
-} else {
-    Write-Host "gcc is not installed" -ForegroundColor Red
-}
-
-if (CheckInstalled "g++") {
-    Write-Host "g++ is installed" -ForegroundColor Green
-} else {
-    Write-Host "g++ is not installed" -ForegroundColor Red
-}
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+Set-PSRepository -Name 'PSGallery' -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted
+Install-Module -Name 7Zip4PowerShell -Force
 
 
 if ($script:uninstalled_utilities.Count -gt 0) {
     Write-Host ""
-    $answer = Read-Host "Install it? [Y/N]"
+    $answer = Read-Host "Install it? CodeTest would not work without them. [Y/N]"
 
     if ($answer -eq "Y" ) {
         foreach ($util in $script:uninstalled_utilities) {
+            Write-Host ""
+            Write-Host "Installing  $util" -ForegroundColor Blue
+            Write-Host ""
+
+
             switch ($util) {
                 "choco" {
                     try {
@@ -115,7 +106,22 @@ if ($script:uninstalled_utilities.Count -gt 0) {
                     try { choco install ninja }
                     catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
+                {"gcc" -or "g++"} {
+                    try {
+                        $ProgressPreference = "SilentlyContinue"
+                        Invoke-WebRequest "http://www.1.m-teacher.ru/files/gcc-14.2.0-no-debug.7z" -OutFile ".\gcc-14.2.0-no-debug.7z"
+                        Expand-7Zip -ArchiveFileName ".\gcc-14.2.0-no-debug.7z" -TargetPath ".\gnu"
+                        $ProgressPreference = "Continue"
+                    }
+                    catch { Write-Host "Error: $_" -ForegroundColor Red }
+                }
             }
         }
+    } else {
+        Write-Host "Installation canceled by user" -ForegroundColor Red
+        Exit 1
     }
 }
+
+Write-Host ""
+Write-Host "Installation complete." -ForegroundColor Blue
