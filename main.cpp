@@ -1,5 +1,4 @@
 #include "libraries/interval.h"
-#include "libraries/ASTExperiment.h"
 #include "libraries/CFGparser.h"
 #include <iostream>
 
@@ -111,12 +110,5 @@ int main(const int argc, char *argv[]) {
     if (cfg_print) {
         p.tree();
     }
-
-    const std::string line = "a > 3 or (a < 4 and b > 5)";
-    const std::string abc = "a = 3 * 3 + 123456 % 12345";
-    // std::cout << line << std::endl;
-    // const custom::str_type x(line);
-    // auto node = ast::generate_ast(x);
-    // node->tree();
     return 0;
 }

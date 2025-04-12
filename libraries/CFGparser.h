@@ -143,13 +143,6 @@ namespace parse {
         node_t() = default;
     };
 
-    static short get_interval_type(const custom::custom_type &b) {
-        if (std::get_if<interval::interval<typeInt>>(&b.data.value()) != nullptr) return custom::custom_type::types::INT;
-        if (std::get_if<interval::interval<typeFloat>>(&b.data.value()) != nullptr) return custom::custom_type::types::FLOAT;
-        if (std::get_if<interval::interval<std::string>>(&b.data.value()) != nullptr) return custom::custom_type::types::INT;
-        return custom::custom_type::types::NONE;
-    }
-
     class parser {
         const std::vector<std::string> *code;
     public:
@@ -163,7 +156,7 @@ namespace parse {
         void parse() {
             if (graph_mode) {
                 parse(root, {{}});
-                if (verbose) std::cout << '\r';
+                if (verbose) std::cout << "\rprocessing successful                " << std::endl;
             }
             else parse_bfs();
         }
@@ -225,8 +218,8 @@ namespace parse {
                         }
 
                         if ((i + 1 < s.size() &&
-                                std::find(boo.begin(), boo.end(), s.extract()[i + 1]) != boo.end()) ||
-                            (i != 0 && std::find(boo.begin(), boo.end(), s.extract()[i - 1]) != boo.end())) break;
+                                std::find(boo.begin(), boo.end(), s[i + 1]) != boo.end()) ||
+                            (i != 0 && std::find(boo.begin(), boo.end(), s[i - 1]) != boo.end())) break;
 
                         auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
                         auto buf = root->get_variables(orig);
@@ -268,17 +261,8 @@ namespace parse {
         }
 
     protected:
-        node_t *root;
+        node_t *root = nullptr;
         bool graph_mode, verbose;
-
-        static short get_type(const custom::str_type &buf) {
-            for (int i = 0; i < buf.size(); ++i) {
-                if (buf.substr(i, 4).extract() == "int(" || buf.substr(i, 4).extract() == "int ") return custom::custom_type::types::INT;
-                if (buf.substr(i, 6).extract() == "float(" || buf.substr(i, 6).extract() == "float ") return custom::custom_type::types::FLOAT;
-                if (buf.substr(i, 6).extract() == "input(" || buf.substr(i, 6).extract() == "input ") return custom::custom_type::types::STRING;
-            }
-            return custom::custom_type::extract_type_from_string(buf.extract());
-        };
 
         void parse_bfs() const noexcept {
             ast::variables_t vars;
@@ -384,10 +368,10 @@ namespace parse {
                         custom::str_type buf_fw(first_word); // "else: "
                         ast::variables_t buf_vars;
                         if (fw_type != ELSE) {
-                            const auto root = ast::generate_ast(erase_spaces(buf.substr
+                            const auto ast_root = ast::generate_ast(erase_spaces(buf.substr
                                 (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
-                            // root->tree();
-                            buf_vars = root->get_variables(_vars);
+                            // ast_root->tree();
+                            buf_vars = ast_root->get_variables(_vars);
                         }
                         if (fw_type == ELSE) {
                             buf_vars = ast::ast_node::once_not(else_data, _vars);

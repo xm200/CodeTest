@@ -630,7 +630,7 @@ namespace ast {
                             for (auto &j : rd) {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
-                                out.push_back({{new custom::custom_type}});
+                                out.push_back({new custom::custom_type});
                                 if (i.front()->name.empty()) {
                                     *out.back().front() = *j.front();
                                     apply_operator(out.back().front()->data, i.front()->data, op);
