@@ -1,28 +1,30 @@
-**Необходимо предустановить**
+**Необходимые зависимости**
 ---
-    cmake, ninja, gcc, g++, make
+    cmake, gcc, g++, make
 
 ***Специфичные зависимости***
 
-    Windows: choco
+    Windows: ninja, choco
     Macos: brew
+Если в системе каких-то зависимостей нет, 
+они будут установлены автоматически.
 
 **Установка**
 ---
-***Общие шаги***
+***Linux/Macos***
 
     git clone https://github.com/xm200/CodeTest
     cd CodeTest
-
-***Linux/Macos***
-
-    chmod +x install_unix.sh
-    sudo install_unix.sh
+    ./configure.sh
+    make
+    sudo make install
 
 ***Windows***
 
     В консоли администратора запустить:
-        .\install.ps1
+    git clone https://github.com/xm200/CodeTest
+    cd CodeTest
+    .\install.ps1
 
 **Основные аргументы**:
 ---
@@ -38,8 +40,8 @@
 ---
 ***Linux/Macos***
 
-    ./CodeTest [attributes] path_to_file
+    codetest [attributes] path_to_file
 
 ***Windows***
 
-    .\CodeTest.exe [attributes] path_to_file
+    codetest.exe [attributes] path_to_file
