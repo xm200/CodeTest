@@ -702,7 +702,7 @@ namespace ast {
                 }
                 case custom::custom_type::STRING: {
                     interval::interval<std::string> buf;
-                    buf.add_point(s);
+                    buf.add_point(s.substr(1, s.size() - 2));
                     ret.data = buf;
                     break;
                 }

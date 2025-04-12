@@ -1,8 +1,8 @@
-c = int(input())
+c = float(input())
 d = int(input())
-if c <= 100:
+if c > 10 and c < 20:
     pass
-elif c < 999999:
+elif c < 30:
     pass
 else:
     pass
