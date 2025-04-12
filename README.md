@@ -46,4 +46,5 @@
     -o path / --output path: path to output file 
         default - output.txt in dir with testing file
         if you write -o -- / --output --, generated data will be written to stdout
-    -C / --cfg: print CFG tree
+    -c / --cfg: print CFG tree
+    -C / --cfg-only: print CFG tree without generating data

@@ -1,8 +1,8 @@
 c = input()
 d = int(input())
-if c > "a" and c < "c":
+if c > "3" and c < "c":
     pass
-elif c < "f":
+elif c < "5.5":
     pass
 else:
     pass

@@ -4,11 +4,11 @@
 
 bool m = true;
 bool v = false;
-bool cfg_print = false;
+int cfg_print = 0;
 std::string output_file;
 
 enum attributes {
-    HELP, BFS, DFS, VERBOSE, OUTPUT, CFG_PRINT, UNKNOWN_ATTR
+    HELP, BFS, DFS, VERBOSE, OUTPUT, CFG_PRINT, CFG_PRINT_ONLY, UNKNOWN_ATTR
 };
 
 static int get_attr(const std::string &val) {
@@ -18,6 +18,7 @@ static int get_attr(const std::string &val) {
     if (val == "verbose") return VERBOSE;
     if (val == "output") return OUTPUT;
     if (val == "cfg") return CFG_PRINT;
+    if (val == "cfg-only") return CFG_PRINT_ONLY;
     return UNKNOWN_ATTR;
 }
 
@@ -30,7 +31,8 @@ static int get_attr(const std::string &val) {
     std::cout << "option -o path / --output path: path to output file\n";
     std::cout << "\tdefault using output.txt in dir with testing file\n";
     std::cout << "\tif you write -o -- / --output --, generated data will be written to stdout\n";
-    std::cout << "option -C / --cfg: print CFG tree\n";
+    std::cout << "option -c / --cfg: print CFG tree\n";
+    std::cout << "option -C / --cfg-only: print CFG tree without generating data\n";
     std::cout << std::flush;
     throw std::runtime_error(s);
 }
@@ -60,7 +62,10 @@ int main(const int argc, char *argv[]) {
                     if (i == argc - 1) help("you need to write input file");
                     break;
                 case CFG_PRINT:
-                    cfg_print = true;
+                    cfg_print = 1;
+                    break;
+                case CFG_PRINT_ONLY:
+                    cfg_print = 2;
                     break;
                 default:
                     help("unknown attribute: " + arg);
@@ -85,9 +90,12 @@ int main(const int argc, char *argv[]) {
                     output_file = argv[++i];
                     if (i == argc - 1) help("you need to write input file");
                     break;
-                case 'C':
-                    cfg_print = true;
+                case 'c':
+                    cfg_print = 1;
                     break;
+                case 'C':
+                    cfg_print = 2;
+                break;
                 default: {
                     help("unrecognized option: " + arg);
                 }
@@ -107,7 +115,9 @@ int main(const int argc, char *argv[]) {
     if (v) std::cout << "You now in debug mode" << std::endl;
 #endif
 
-    parse::parser p(parse::read_file(path, v, output_file), m, v);
+    if (cfg_print == 2 && !output_file.empty()) help("You cannot set output file now");
+
+    parse::parser p(parse::read_file(path, v, output_file, (cfg_print == 2)), m, v, (cfg_print == 2));
     p.parse();
     if (cfg_print) {
         p.tree();

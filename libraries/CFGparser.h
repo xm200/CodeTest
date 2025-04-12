@@ -33,7 +33,8 @@ namespace parse {
     }
 
     struct cache_t {
-        void init(const std::string &way, const bool v, const std::string &output_file) {
+        void init(const std::string &way, const bool v, const std::string &output_file, const bool _cfg_only) {
+            cfg_only = _cfg_only;
             verbose = v;
 #if defined(DEBUG_MODE)
             if (inited) {
@@ -71,10 +72,12 @@ namespace parse {
                 // ReSharper disable once CppDFAUnreachableCode
             else system(("rd /s /q " + path).c_str()); // Remove dir
 
-            if (verbose && out_path == "--") std::cout << "starting writing generated data" << std::endl;
+            if (verbose && out_path == "--" && !cfg_only)
+                std::cout << "starting writing generated data" << std::endl;
             write_to_file();
 
-            if (verbose && out_path != "--") std::cout << "generated data had written to " << out_path << std::endl;
+            if (verbose && out_path != "--" && !cfg_only)
+                std::cout << "generated data had written to " << out_path << std::endl;
 
             if (out_path != "--") out.close();
 
@@ -102,13 +105,14 @@ namespace parse {
     private:
         std::string path;
         std::string out_path;
-        bool inited = false, verbose = false;
+        bool inited = false, verbose = false, cfg_only = false;
         std::ofstream out;
         std::set<std::string> tests;
     } inline cache;
 
 
-    inline std::vector<std::string> *read_file(const std::string &path, const bool v, const std::string &output_file) {
+    inline std::vector<std::string> *read_file
+    (const std::string &path, const bool v, const std::string &output_file, const bool cfg_only) {
         std::size_t ind = -1, point = path.size();
         for (auto i = path.size(); i --> 0;) {
             if (point == path.size() && path[i] == '.') point = i;
@@ -118,7 +122,7 @@ namespace parse {
             }
         }
 
-        cache.init(path.substr(0, ind == -1 ? 0 : ind), v, output_file);
+        cache.init(path.substr(0, ind == -1 ? 0 : ind), v, output_file, cfg_only);
         file_name = path.substr(ind + 1, point - ind - 1), file_type = path.substr(point);
 
         std::string buf;
@@ -148,11 +152,12 @@ namespace parse {
     class parser {
         const std::vector<std::string> *code;
     public:
-        explicit parser(const std::vector<std::string> *code_, const bool gm, const bool v) {
+        explicit parser(const std::vector<std::string> *code_, const bool gm, const bool v, const bool cfg_print) {
             code = code_;
             root = new node_t("root", 0, code->size());
             graph_mode = gm;
             verbose = v;
+            cfg_print_only = cfg_print;
         }
 
         void parse() {
@@ -264,10 +269,10 @@ namespace parse {
 
     protected:
         node_t *root = nullptr;
-        bool graph_mode, verbose;
+        bool graph_mode, verbose, cfg_print_only;
 
-        void parse_bfs() const noexcept {
-            ast::variables_t vars;
+        void parse_bfs() const {
+            ast::variables_t vars = {{}};
             std::vector<custom::custom_type> vars_orig;
             std::queue<std::pair<node_t *, ast::variables_t>> q;
             q.emplace(root, vars);
@@ -276,12 +281,13 @@ namespace parse {
                 auto [fst, snd] = q.front();
                 q.pop();
 
-                for (auto i = fst->l; i < fst->l + fst->len; ++i) {
+                    ast::variables_t else_data;
+                    for (auto i = fst->l; i < fst->l + fst->len; ++i) {
                     std::string first_word;
                     auto expr = std::stringstream(code->operator[](i));
                     expr >> first_word;
 
-                    switch (get_construction_type(first_word)) {
+                    switch (auto fw_type = get_construction_type(first_word)) {
                         case IF:
                         case ELIF:
                         case ELSE:
@@ -291,17 +297,44 @@ namespace parse {
                                     code->operator[](i).substr(get_spaces(code->operator[](i))),
                                     i + 1,
                                     get_code_block(i + 1)));
-                            const custom::str_type buf(code->operator[](i));
-                            auto a = ast::generate_ast(buf);
-                            q.emplace(fst->children.back(), a->get_variables(vars));
+                            custom::str_type buf(code->operator[](i));
+                            buf = erase_spaces(buf);
+                            custom::str_type buf_fw(first_word); // "else: "
+                            ast::variables_t buf_vars;
+                            if (!cfg_print_only) {
+                                if (fw_type != ELSE) {
+                                    const auto ast_root = ast::generate_ast(erase_spaces(buf.substr
+                                        (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
+                                    // ast_root->tree();
+                                    buf_vars = ast_root->get_variables(snd);
+                                }
+                                if (fw_type == ELSE) {
+                                    buf_vars = ast::ast_node::once_not(else_data, snd);
+                                    else_data.clear();
+                                }
+                                else if (fw_type == ELIF) {
+                                    auto buf_else_data = ast::ast_node::once_or(buf_vars, else_data);
+                                    buf_vars = ast::ast_node::once_and(buf_vars,
+                                        ast::ast_node::once_not(else_data, snd));
+                                    else_data = buf_else_data;
+                                }
+                                else {
+                                    else_data = buf_vars;
+                                }
+                            }
+                            q.emplace(fst->children.back(), buf_vars);
                             i += get_code_block(i + 1);
                             break;
                         }
                         default:
-                            auto buf = code->operator[](i);
-                            custom::str_type res(buf);
-                            auto asd = translate(res, vars);
-                            break;
+                            else_data.clear();
+                        if (cfg_print_only) break;
+                        auto buf = code->operator[](i);
+                        custom::str_type res(buf);
+                        auto buffer_vars = translate(res, snd);
+                        if (!buffer_vars.empty())
+                            snd = buffer_vars;
+                        break;
                     }
                 }
             }
@@ -369,24 +402,26 @@ namespace parse {
                         buf = erase_spaces(buf);
                         custom::str_type buf_fw(first_word); // "else: "
                         ast::variables_t buf_vars;
-                        if (fw_type != ELSE) {
-                            const auto ast_root = ast::generate_ast(erase_spaces(buf.substr
-                                (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
-                            // ast_root->tree();
-                            buf_vars = ast_root->get_variables(_vars);
-                        }
-                        if (fw_type == ELSE) {
-                            buf_vars = ast::ast_node::once_not(else_data, _vars);
-                            else_data.clear();
-                        }
-                        else if (fw_type == ELIF) {
-                            auto buf_else_data = ast::ast_node::once_or(buf_vars, else_data);
-                            buf_vars = ast::ast_node::once_and(buf_vars,
-                                ast::ast_node::once_not(else_data, _vars));
-                            else_data = buf_else_data;
-                        }
-                        else {
-                            else_data = buf_vars;
+                        if (!cfg_print_only) {
+                            if (fw_type != ELSE) {
+                                const auto ast_root = ast::generate_ast(erase_spaces(buf.substr
+                                    (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
+                                // ast_root->tree();
+                                buf_vars = ast_root->get_variables(_vars);
+                            }
+                            if (fw_type == ELSE) {
+                                buf_vars = ast::ast_node::once_not(else_data, _vars);
+                                else_data.clear();
+                            }
+                            else if (fw_type == ELIF) {
+                                auto buf_else_data = ast::ast_node::once_or(buf_vars, else_data);
+                                buf_vars = ast::ast_node::once_and(buf_vars,
+                                    ast::ast_node::once_not(else_data, _vars));
+                                else_data = buf_else_data;
+                            }
+                            else {
+                                else_data = buf_vars;
+                            }
                         }
                         parse(child,  buf_vars, depth + 1);
                         i += child->len;
@@ -394,6 +429,7 @@ namespace parse {
                     }
                     default: {
                         else_data.clear();
+                        if (cfg_print_only) break;
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
                         auto buffer_vars = translate(res, _vars);
