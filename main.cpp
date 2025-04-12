@@ -117,10 +117,13 @@ int main(const int argc, char *argv[]) {
 
     if (cfg_print == 2 && !output_file.empty()) help("You cannot set output file now");
 
-    parse::parser p(parse::read_file(path, v, output_file, (cfg_print == 2)), m, v, (cfg_print == 2));
+    parse::parser p(
+        parse::read_file(path, v,
+            cfg_print == 2 ? std::string("--"):output_file, (cfg_print == 2)),
+            m, v, (cfg_print == 2));
     p.parse();
     if (cfg_print) {
-        p.tree();
+        std::cout << p.tree() << std::flush;
     }
     return 0;
 }

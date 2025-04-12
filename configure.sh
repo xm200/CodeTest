@@ -16,6 +16,11 @@ sub_install() {
     fi
   fi
   tmp_path=$(which "$1")
+  if [[ $tmp_path == "" ]]
+    then
+      echo "Something wrong"
+      exit 1
+  fi
   echo "$1 path = $tmp_path"
 }
 
