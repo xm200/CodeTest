@@ -23,11 +23,13 @@ static int get_attr(const std::string &val) {
 
 [[noreturn]] void help(const std::string &s) {
     std::cout << "usage: CodeTest [attributes] path_to_file\n";
-    std::cout << "option -B / --bfs: use BFS (default using DFS algo)\n";
+    std::cout << "option -B / --bfs: use BFS\n";
+    std::cout << "\tdefault using DFS algo\n";
     std::cout << "option -D / --dfs: use DFS\n";
     std::cout << "option -v / --verbose: print additional info\n";
-    std::cout <<
-        "option -o path / --output path: path to output file (default using output.txt in dir with file for debug)\n";
+    std::cout << "option -o path / --output path: path to output file\n";
+    std::cout << "\tdefault using output.txt in dir with testing file\n";
+    std::cout << "\tif you write -o -- / --output --, generated data will be written to stdout\n";
     std::cout << "option -C / --cfg: print CFG tree\n";
     std::cout << std::flush;
     throw std::runtime_error(s);

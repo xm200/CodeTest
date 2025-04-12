@@ -50,7 +50,7 @@ namespace parse {
             else path = way + '\\';
             if (output_file.empty()) out_path = path + "output.txt";
             else out_path = output_file;
-            out.open(out_path);
+            if (out_path != "--") out.open(out_path);
                 // ReSharper disable once CppDFAUnreachableCode
                 // ReSharper disable once CppRedundantBooleanExpressionArgument
             if constexpr (get_os() == LINUX || get_os() == MACOS) path += "cache/";
@@ -71,11 +71,12 @@ namespace parse {
                 // ReSharper disable once CppDFAUnreachableCode
             else system(("rd /s /q " + path).c_str()); // Remove dir
 
+            if (verbose && out_path == "--") std::cout << "starting writing generated data" << std::endl;
             write_to_file();
 
-            if (verbose) std::cout << "generated data had written to " << out_path << std::endl;
+            if (verbose && out_path != "--") std::cout << "generated data had written to " << out_path << std::endl;
 
-            out.close();
+            if (out_path != "--") out.close();
 
 
 #endif
@@ -93,7 +94,8 @@ namespace parse {
        void write_to_file() {
             for (const auto& it : tests) {
                 if (it.empty()) continue;
-                out << it << '\n';
+                if (out_path == "--") std::cout << it << std::endl;
+                else out << it << '\n';
             }
        }
 

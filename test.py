@@ -1,8 +1,8 @@
-c = dfloat(input())
+c = input()
 d = int(input())
-if c > "10" and c < "20":
+if c > "a" and c < "c":
     pass
-elif c < "30":
+elif c < "f":
     pass
 else:
     pass
