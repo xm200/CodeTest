@@ -49,18 +49,24 @@ int main(const int argc, char *argv[]) {
         const auto x = p.tree();
         if (!test_similar(x, "Testing/test2.a")) return EXIT_FAILURE;
     }
-    else if (argv[1] == std::string_view("3")) {
+    else if (std::string_view(argv[1]).size() == 1 && argv[1][0] >= '3' && argv[1][0] <= '6') {
+        std::string path = "Testing/test" + std::string(argv[1]);
+
         parse::parser p
-        (parse::read_file("Testing/test3.py", true, "Testing/cache/output.txt", false),
+        (parse::read_file(path + ".py", true,
+            "Testing/cache/output.txt", false),
         (argv[2] != std::string_view("bfs")), true, false);
+
         p.parse();
+
         parse::cache.write_to_file();
+
         std::ifstream inp("Testing/cache/output.txt");
         std::string line; std::vector<std::string> v;
         while (std::getline(inp, line)) {
             v.push_back(line);
         }
-        if (!test_similar(v, "Testing/test3.a")) return EXIT_FAILURE;
+        if (!test_similar(v, path + ".a")) return EXIT_FAILURE;
     }
     else {
         std::cerr << "Usage: " << argv[0] << " test_num" << std::endl;

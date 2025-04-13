@@ -24,35 +24,22 @@ add_executable(test_checker Testing/test.cpp libraries/interval.h libraries/ASTE
 
 enable_testing()
 
-add_test(
-        NAME test_reading_file
-        COMMAND $<TARGET_FILE:test_checker> 1 none
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+add_test(NAME test_reading_file COMMAND $<TARGET_FILE:test_checker> 1 none WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
-add_test(
-        NAME test_cfg_tree_dfs
-        COMMAND $<TARGET_FILE:test_checker> 2 dfs
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+add_test(NAME test_cfg_tree_dfs COMMAND $<TARGET_FILE:test_checker> 2 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_test(NAME test_cfg_tree_bfs COMMAND $<TARGET_FILE:test_checker> 2 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
-add_test(
-        NAME test_cfg_tree_bfs
-        COMMAND $<TARGET_FILE:test_checker> 2 bfs
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+add_test(NAME test_simple_generation_dfs COMMAND $<TARGET_FILE:test_checker> 3 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_test(NAME test_simple_generation_bfs COMMAND $<TARGET_FILE:test_checker> 3 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
-add_test(
-        NAME test_simple_generation_dfs
-        COMMAND $<TARGET_FILE:test_checker> 3 dfs
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+add_test(NAME test_and_generation_dfs COMMAND $<TARGET_FILE:test_checker> 4 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_test(NAME test_and_generation_bfs COMMAND $<TARGET_FILE:test_checker> 4 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
-add_test(
-        NAME test_simple_generation_bfs
-        COMMAND $<TARGET_FILE:test_checker> 3 bfs
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
+add_test(NAME test_or_generation_dfs COMMAND $<TARGET_FILE:test_checker> 5 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_test(NAME test_or_generation_bfs COMMAND $<TARGET_FILE:test_checker> 5 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+
+add_test(NAME test_not_generation_dfs COMMAND $<TARGET_FILE:test_checker> 6 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_test(NAME test_not_generation_bfs COMMAND $<TARGET_FILE:test_checker> 6 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 target_link_libraries(codetest -static)
 
