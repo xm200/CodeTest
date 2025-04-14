@@ -6,6 +6,7 @@ bool test_similar(const std::vector<std::string> &a, const std::string &b) {
         std::string line;
         if (!std::getline(inp, line)) {
             std::cerr << "different size" << std::endl;
+            std::cerr << "***test failure***" << std::endl;
             inp.close();
             return false;
         }
@@ -16,6 +17,7 @@ bool test_similar(const std::vector<std::string> &a, const std::string &b) {
     }
     if (std::string line; std::getline(inp, line)) {
         std::cerr << "different size" << std::endl;
+        std::cerr << "***test failure***" << std::endl;
         inp.close();
         return false;
     }
@@ -33,8 +35,9 @@ bool test_similar(const std::string &a, const std::string &b) {
 }
 
 int main(const int argc, char *argv[]) {
+    std::cout << "***begin of test***" << std::endl;
     if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " test_num" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " test_num parser_algorithm" << std::endl;
         return EXIT_FAILURE;
     }
     if (argv[1] == std::string_view("1")) {
@@ -69,9 +72,9 @@ int main(const int argc, char *argv[]) {
         if (!test_similar(v, path + ".a")) return EXIT_FAILURE;
     }
     else {
-        std::cerr << "Usage: " << argv[0] << " test_num" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " test_num parser_algorithm" << std::endl;
         return EXIT_FAILURE;
     }
-    std::cout << "test done" << std::endl;
+    std::cout << "***test done***" << std::endl;
     return EXIT_SUCCESS;
 }

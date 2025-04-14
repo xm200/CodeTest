@@ -105,7 +105,7 @@ if ($script:uninstalled_utilities.Count -gt 0) {
                             Write-Host "7Z powershell module installed" -ForegroundColor Blue
                         } else {
                             Write-Host ""
-                            $ans = Read-Host "7Z powershell module is not intalled. Install it? [Y/N]"
+                            $ans = Read-Host "7Z powershell module is not installed. Install it? [Y/N]"
                             if ($ans -eq "Y") {
                                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
                                 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force

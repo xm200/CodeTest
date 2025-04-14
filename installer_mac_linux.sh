@@ -8,9 +8,9 @@ echo ""
 echo "You must have administrator rights for installation"
 echo ""
 echo "This programs will be installed, if they are not installed yet:"
-echo "    - gcc/g++ / GNU Compiler Collection"
-echo "    - cmake / CMake"
 echo "    - make"
+echo "    - cmake / CMake"
+echo "    - gcc/g++ / GNU Compiler Collection"
 echo ""
 echo ""
 echo "------------------------------------------------"
@@ -79,4 +79,4 @@ cmake .
 make
 sudo make install
 
-echo "Builded! Usage: codetest --help"
+echo "Built! Usage: codetest --help"

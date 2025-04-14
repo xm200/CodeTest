@@ -163,7 +163,7 @@ namespace parse {
         void parse() const {
             if (graph_mode) {
                 parse(root, {{}});
-                if (verbose) std::cout << "\rprocessing successful                " << std::endl;
+                if (verbose) std::cout << "\r" "processing successful                " << std::endl;
             }
             else parse_bfs();
         }
@@ -212,7 +212,6 @@ namespace parse {
                                 bool found = false;
                                 for (auto &k : j) {
                                     if (k->name == x->name) {
-                                        x->history = {0, k};
                                         k = x;
                                         found = true;
                                     }
@@ -364,8 +363,14 @@ namespace parse {
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
                         auto buffer_vars = translate(res, _vars);
-                        if (!buffer_vars.empty())
+                        if (!buffer_vars.empty()) {
+                            for (auto &x : _vars) {
+                                for (const auto &y : x) {
+                                    cache.get_tests_set().insert(from_any_to_str(y->data));
+                                }
+                            }
                             _vars = buffer_vars;
+                        }
                         break;
                     }
                 }
@@ -493,3 +498,10 @@ namespace parse {
 #undef close_cession
 
 #endif //CFG_H
+
+
+/*
+
+a = b + 3
+
+ */
