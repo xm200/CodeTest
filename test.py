@@ -1,6 +1,8 @@
-c = 1
-c -= 0.5
-if c < 0.5:
+a = int(input())
+b = float(input())
+if a > 1 and a < 2:
     pass
-else:
+if b > 3 and b < 4:
+    pass
+if b + 0.5 < 1:
     pass

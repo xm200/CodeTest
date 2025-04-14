@@ -278,7 +278,7 @@ namespace parse {
                         }
                         const auto left = s.substr(0, i);
                         const auto right = s.substr(i + 2);
-                        const std::string buf = custom::erase_spaces(left).extract() + " " + (s[i] == '/' ? "//" : std::string(1, s[i])) + " " + custom::erase_spaces(right).extract();
+                        const std::string buf = custom::erase_spaces(left).extract() + " " + (s[i] == '/' ? "//" : std::string(1, s[i])) + " (" + custom::erase_spaces(right).extract() + ")";
                         custom::str_type res(buf);
                         return translate(res, orig);
                     }
