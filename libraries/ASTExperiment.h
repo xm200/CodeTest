@@ -33,7 +33,25 @@ enable_int(name, __VA_ARGS__) \
 enable_float(name, __VA_ARGS__) \
 enable_string(name, __VA_ARGS__)
 
+namespace custom {
+    struct custom_type;
+}
 
+namespace parse {
+    std::string from_any_to_str(const std::optional<std::variant<
+            interval::interval<typeInt>,
+            interval::interval<typeFloat>,
+            interval::interval<std::string>,
+            std::vector<custom::custom_type*>>> &what);
+}
+
+namespace ast {
+    const std::vector<std::string> inline operations =
+        {"and", "or", "not", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "//", "%"};
+    enum operations {
+        AND, OR, NT, EQ, NQ, ME, LE, MO, LS, PL, MN, PW, DL, PS
+    };
+}
 
 namespace custom {
 
@@ -105,9 +123,6 @@ namespace custom {
         }
     };
 
-    std::vector<std::string> inline operations =
-        {"=", "and", "or", "==", "!=",  ">=", "<=", ">", "<", "+", "-", "//", "%"};
-
     using str_type = vec_line<std::string>;
 
     [[nodiscard]] str_type inline erase_spaces(const str_type &other) {
@@ -167,6 +182,7 @@ namespace custom {
         inner_type data;
         std::string name{};
         std::pair<std::size_t, custom_type*> history{};
+        custom_type *parent = nullptr;
 
         custom_type() = default;
         explicit custom_type(const inner_type& d) : type(get_in_type(d)), data(d) {}
@@ -227,14 +243,46 @@ namespace custom {
         friend inner_type & operator%=(inner_type &a, const inner_type &b)
                 { checkType(a, b, "%="); a = (a % b); return a; }
 
-        void rollback() const {
-            auto obj = this;
-            while (obj->history.second != nullptr) {
-
-            }
-        }
+        void rollback(const std::vector<std::vector<custom::custom_type*>> &v) const;
 
     protected:
+
+        [[nodiscard]] std::string rollback_in() const {
+            if (name.empty()) {
+                return parse::from_any_to_str(data);
+            }
+            return rollback_in(name);
+        }
+
+        [[nodiscard]] std::string rollback_in(const std::string &a) const {
+            if (parent == nullptr) {
+                return a;
+            }
+
+            std::string s = "(" + a + " " + inverse_operator(history.first) + " " + history.second->rollback_in() + ")";
+            return parent->rollback_in(s);
+            /*
+             a += 3
+             a *= 2
+             -> ((a / 2) - 3)
+             */
+        }
+
+        static std::string inverse_operator(const std::size_t op) {
+            switch (op) {
+                case ast::operations::EQ: return "!=";
+                case ast::operations::NQ: return "==";
+                case ast::operations::ME: return "<";
+                case ast::operations::LE: return ">";
+                case ast::operations::MO: return "<=";
+                case ast::operations::LS: return ">=";
+                case ast::operations::PL: return "-";
+                case ast::operations::MN: return "+";
+                case ast::operations::PW: return "//";
+                case ast::operations::DL: return "*";
+                default: throw std::runtime_error("unknown operation in custom::custom_type::inverse_operator");
+            }
+        }
 
         template<typename T>
         [[nodiscard]] static inner_type less_in(
@@ -371,11 +419,6 @@ namespace custom {
 
 namespace ast {
     using variables_t = std::vector<std::vector<custom::custom_type*>>;
-    const std::vector<std::string> inline operations =
-        {"and", "or", "not", "==", "!=", ">=", "<=", ">", "<", "+", "-", "*", "//", "%"};
-    enum operations {
-        AND, OR, NT, EQ, NQ, ME, LE, MO, LS, PL, MN, PW, DL, PS
-    };
     inline std::size_t inverse_operator(const std::size_t op) {
         switch (op) {
             case MO: return LE;
@@ -640,6 +683,7 @@ namespace ast {
                 auto check = [](const custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) -> void {
                     if (custom::get_in_type(a) == custom::custom_type::types::FLOAT) {
                         if (custom::get_in_type(b) == custom::custom_type::types::INT)
+                            /// todo fix: WARNING: BROKEN_POLITIC::DESTRUCTED_ALLOCATOR
                             b = std::get<interval::interval<typeInt>>(b.value()).cast<typeFloat>();
                     }
                 };
@@ -676,6 +720,7 @@ namespace ast {
                                     check(out.back().front()->data, i.front()->data);
                                     check(i.front()->data, out.back().front()->data);
                                     out.back().front()->history = {op, i.front()};
+                                    out.back().front()->parent = j.front();
                                     apply_operator(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
@@ -683,6 +728,7 @@ namespace ast {
                                     check(out.back().front()->data, j.front()->data);
                                     check(j.front()->data, out.back().front()->data);
                                     out.back().front()->history = {op, j.front()};
+                                    out.back().front()->parent = i.front();
                                     apply_operator(out.back().front()->data, j.front()->data, op);
                                 }
                             }

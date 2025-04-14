@@ -150,6 +150,17 @@ namespace parse {
         node_t() = default;
     };
 
+    init_cession(what, std::string from_any_to_str(const custom::custom_type::inner_type &what))
+        enable_all_types(from_any_to_str, what)
+        close_cession(T)
+        std::string from_any_to_str(const custom::custom_type::inner_type &what) {
+        auto x = std::get<interval::interval<T>>(what.value()).any();
+        if (x == std::nullopt) return "";
+        std::stringstream ss;
+        ss << std::setprecision(13) << x.value();
+        return ss.str();
+    }
+
     class parser {
         const std::vector<std::string> *code;
     public:
@@ -174,7 +185,7 @@ namespace parse {
             return tree(root, s);
         }
 
-        static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
+        [[nodiscard]] static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
             auto check = [](const custom::str_type &s, const std::string_view it) {
                 return s.size() >= it.size() && s.substr(0, it.size()).extract() == (it) &&
                     (s[it.size()] == ' ' || s[it.size()] == '(');
@@ -234,17 +245,20 @@ namespace parse {
                             auto res = var.front();
                             auto *x = new custom::custom_type;
                             *x = *res;
-                            res->name = custom::erase_spaces(s.substr(0, i)).extract();
-                            res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
+                            x->name = custom::erase_spaces(s.substr(0, i)).extract();
+                            x->history = res->history;
+                            x->parent = res->parent;
 
                             for (auto &k : ans) {
                                 bool found = false;
                                 for (auto &j : k) {
-                                    if (j->name == custom::erase_spaces(s.substr(0, i)).extract()) { j = res; found = true; break; }
+                                    if (j->name == custom::erase_spaces(s.substr(0, i)).extract())
+                                        { j = x; found = true; break; }
                                 }
                                 if (found) continue;
-                                k.push_back(res);
-                                std::sort(k.begin(), k.end());
+                                k.push_back(x);
+                                std::sort(k.begin(), k.end(),
+                                    custom::dereferenced_sort_comparator<custom::custom_type>);
                             }
                         }
                         return ans;
@@ -252,7 +266,7 @@ namespace parse {
                     case '+':
                     case '-':
                     case '*':
-                    case '/': {
+                    case '/': { // todo: WTF?
                         if (s[i + 1] != '=') {
                             auto _root = ast::generate_ast(s);
                             auto buf = _root->get_variables(orig);
@@ -309,16 +323,7 @@ namespace parse {
             return code->size() - l;
         }
 
-        init_struct_cession(what, static std::string from_any_to_str(custom::custom_type::inner_type &what))
-        enable_all_types(from_any_to_str, what)
-        close_cession(T)
-        static std::string from_any_to_str(custom::custom_type::inner_type &what) {
-            auto x = std::get<interval::interval<T>>(what.value()).any();
-            if (x == std::nullopt) return "";
-            std::stringstream ss;
-            ss << std::setprecision(13) << x.value();
-            return ss.str();
-        }
+
 
         void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) const {
             ast::variables_t _vars = vars;
@@ -401,7 +406,8 @@ namespace parse {
 
             for (auto &x : _vars) {
                 for (const auto &y : x) {
-                    cache.get_tests_set().insert(from_any_to_str(y->data));
+                    y->rollback(_vars);
+                    // cache.get_tests_set().insert(from_any_to_str(y->data));
                 }
             }
         }
@@ -512,6 +518,18 @@ namespace parse {
         }
     };
 }
+
+inline void custom::custom_type::rollback(const ast::variables_t &v) const {
+    const std::string _s = name + " = " + rollback_in();
+    const str_type s(_s);
+    auto _vars = parse::parser::translate(s, v);
+    for (auto &x : _vars) {
+        for (const auto &y : x) {
+            parse::cache.get_tests_set().insert(parse::from_any_to_str(y->data));
+        }
+    }
+}
+
 #undef init_cession
 #undef init_struct_cession
 #undef enable_all_types
