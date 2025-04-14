@@ -1,6 +1,6 @@
 **Необходимые зависимости**
 ---
-    cmake, gcc, g++, make
+    cmake, gcc, g++, make, git
 
 ***Специфичные зависимости***
 
@@ -15,9 +15,7 @@
 
     git clone https://github.com/xm200/CodeTest
     cd CodeTest
-    ./configure.sh
-    make
-    sudo make install
+    ./installer_mac_linux.sh
 
 ***Windows***
 
