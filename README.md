@@ -6,8 +6,8 @@
 
     Windows: ninja, choco
     Macos: brew
-Если в системе каких-то зависимостей нет, 
-они будут установлены автоматически.
+    
+**Если в системе каких-то зависимостей нет, они будут установлены автоматически.**
 
 **Установка**
 ---
@@ -15,7 +15,7 @@
 
     git clone https://github.com/xm200/CodeTest
     cd CodeTest
-    ./installer_mac_linux.sh
+    sudo ./installer_mac_linux.sh
 
 ***Windows***
 
@@ -32,7 +32,21 @@
 
 ***Windows***
 
-    codetest.exe [attributes] path_to_file
+    .\codetest.exe [attributes] path_to_file
+
+***Примеры***
+
+---
+    Windows:
+        .\codetest.exe -c Testing/test1_2.py
+        cat Testing/output.txt
+
+---
+    Linux/Macos:
+        codetest --cfg-only Testing/test3.py
+        cat Testing/output.txt
+
+---
 
 **Основные аргументы**:
 ---

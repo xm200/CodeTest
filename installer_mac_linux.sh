@@ -10,7 +10,7 @@ echo ""
 echo "This programs will be installed, if they are not installed yet:"
 echo "    - gcc/g++ / GNU Compiler Collection"
 echo "    - cmake / CMake"
-echo "    - ninja / Ninja-build"
+echo "    - make"
 echo ""
 echo ""
 echo "------------------------------------------------"
@@ -52,7 +52,8 @@ sub_install "cmake" "cmake"
 sub_install "gcc" "gcc"
 sub_install "g++" "g++"
 
-cmake -G "Ninja" .
-cmake --build .
+cmake .
+make
+sudo make install
 
-echo "Builded! Usage: ./codetest --help"
+echo "Builded! Usage: codetest --help"

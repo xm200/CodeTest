@@ -46,7 +46,7 @@ function CheckInstalled {
 Write-Host "Started checking installed utilities..."
 Write-Host ""
 
-$script:check_installation = @("choco", "gcc", "g++", "cmake", "ninja", "make")
+$script:check_installation = @("choco", "gcc", "g++", "cmake", "ninja")
 
 foreach ($util in $script:check_installation) {
     Write-Host "Checking $util" -ForegroundColor Cyan
