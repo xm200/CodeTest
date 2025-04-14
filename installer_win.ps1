@@ -25,26 +25,21 @@ if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 
 
-$script:paths_to_utilities = [System.Collections.ArrayList]@()
+$script:paths_to_utilities = [System.Collections.Hashtable]@{}
 $script:uninstalled_utilities = [System.Collections.ArrayList]@()
 
 function CheckInstalled {
     param ($utility)
-    try {
-        $temp_path = where.exe /R "C:\Users" $utility 2>$null
-        $paths = $temp_path -split " C:"
-        if ($paths) {
-            foreach ($path in $paths) {
-                $script:paths_to_utilities.Add($path)
-            }
-            return 1
-        } else {
-            $script:uninstalled_utilities.Add($utility)
+    $programs = @("ProgramData", "Program Files", "Users")
+    foreach ($dir in $programs) {
+        $path = (where.exe /R "C:\$dir" $utility) -split " C:" 2>$null
+        if (-not $path) { continue }
+        foreach ($p in $path) {
+            if (($path | Select-String -Pattern "[$util].exe")) { $script:paths_to_utilities.Add($utility, $p); return 1 }
         }
     }
-    catch {
-        return 0
-    }
+    $script:uninstalled_utilities.Add($path)
+    return 0
 }
 
 # Check installed utilities
@@ -56,26 +51,13 @@ $script:check_installation = @("choco", "gcc", "g++", "cmake", "ninja", "make")
 
 foreach ($util in $script:check_installation) {
     Write-Host "Checking $util" -ForegroundColor Cyan
-    if (CheckInstalled $util) {
+    $is_installed = CheckInstalled $util
+    if ($is_installed -eq 1) {
         Write-Host "$util installed" -ForegroundColor Green
     } else {
         Write-Host "$util is not installed" -ForegroundColor Red
     }
     Write-Host "-----------------"
-}
-if (Get-Module -ListAvailable -Name 7Zip4PowerShell) {
-    Write-Host "7Z powershell module installed" -ForegroundColor Blue
-} else {
-    Write-Host ""
-    $ans = Read-Host "7Z powershell module is not intalled. Install it? [Y/N]"
-    if ($ans -eq "Y") {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-        Set-PSRepository -Name 'PSGallery' -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted
-        Install-Module -Name 7Zip4PowerShell -Force
-    } else {
-        Write-Host "Installation canceled by user." -ForegroundColor Red
-    }
 }
 
 
@@ -90,7 +72,7 @@ if ($script:uninstalled_utilities.Count -gt 0) {
             Write-Host ""
 
 
-            switch ($util) {
+            switch -Regex ($util) {
                 "choco" {
                     try {
                         Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -101,37 +83,66 @@ if ($script:uninstalled_utilities.Count -gt 0) {
                                 $env:Path += ";$($_.Value)"
                             }
                         }
+                        CheckInstalled "choco" > $null
+                        break
                     } catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
                 "cmake" {
-                    try { choco install cmake }
+                    try { choco install cmake --yes; CheckInstalled "cmake" > $null;  }
                     catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
                 "make" {
-                    try { choco install make }
+                    try { choco install make --yes; CheckInstalled "make" > $null}
                     catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
                 "ninja" {
-                    try { choco install ninja }
+                    try { choco install ninja --yes; CheckInstalled "ninja" > $null }
                     catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
-                {"gcc" -or "g++"} {
+                "g" {
                     try {
+
+                        if (Get-Module -ListAvailable -Name 7Zip4PowerShell) {
+                            Write-Host "7Z powershell module installed" -ForegroundColor Blue
+                        } else {
+                            Write-Host ""
+                            $ans = Read-Host "7Z powershell module is not intalled. Install it? [Y/N]"
+                            if ($ans -eq "Y") {
+                                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                                Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+                                Set-PSRepository -Name 'PSGallery' -SourceLocation "https://www.powershellgallery.com/api/v2" -InstallationPolicy Trusted
+                                Install-Module -Name 7Zip4PowerShell -Force
+                            } else {
+                                Write-Host "Installation canceled by user." -ForegroundColor Red
+                            }
+                        }
                         $ProgressPreference = "SilentlyContinue"
                         Invoke-WebRequest "http://www.1.m-teacher.ru/files/gcc-14.2.0-no-debug.7z" -OutFile ".\gcc-14.2.0-no-debug.7z"
-                        Expand-7Zip -ArchiveFileName ".\gcc-14.2.0-no-debug.7z" -TargetPath ".\gnu"
+                        Expand-7Zip -ArchiveFileName ".\gcc-14.2.0-no-debug.7z" -TargetPath ".\gcc-14.2.0-no-debug"
                         $ProgressPreference = "Continue"
                         break
                     }
                     catch { Write-Host "Error: $_" -ForegroundColor Red }
                 }
             }
+            Write-Host ""
+            Write-Host "$util installed" -ForegroundColor Green
+            Write-Host "------------------------"
         }
     } else {
         Write-Host "Installation canceled by user" -ForegroundColor Red
         Exit 1
     }
 }
+
+Write-Host "Started building..." -ForegroundColor Blue
+
+$env:CC = $($script:paths_to_utilities["gcc"].ToString()).ToString().Trim()
+$env:CXX = $($script:paths_to_utilities["g++"].ToString()).ToString().Trim()
+
+& $script:paths_to_utilities["cmake"] -G "Ninja" .
+& $script:paths_to_utilities["cmake"] --build .
+
 
 Write-Host ""
 Write-Host "Installation complete." -ForegroundColor Blue

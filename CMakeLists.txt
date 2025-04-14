@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.25)
 
+get_cmake_property(CACHE_ARGS CACHE_VARIABLES)
+
+if (gcc)
+    set(CMAKE_C_COMPILER gcc)
+endif ()
+
+if (g++)
+    set(CMAKE_CXX_COMPILER g++)
+endif()
+
 project(CodeTest)
 
 add_compile_definitions(typeInt=long\ long)
