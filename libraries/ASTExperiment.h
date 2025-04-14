@@ -611,6 +611,12 @@ namespace ast {
                 }
             }
             else {
+                auto check = [](const custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) -> void {
+                    if (custom::get_in_type(a) == custom::custom_type::types::FLOAT) {
+                        if (custom::get_in_type(b) == custom::custom_type::types::INT)
+                            b = std::get<interval::interval<typeInt>>(b.value()).cast<typeFloat>();
+                    }
+                };
                 variables_t ld, rd = r->get_variables(orig);
                 if (op != NT) ld = l->get_variables(orig);
                 for (auto &v : ld) std::sort(v.begin(), v.end(),
@@ -632,15 +638,23 @@ namespace ast {
                     case LE: {
                         for (auto &i : ld) {
                             for (auto &j : rd) {
+                                if (i.front()->name == j.front()->name && !i.front()->name.empty()) {
+                                    out.push_back(i);
+                                    continue;
+                                }
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
                                 out.push_back({new custom::custom_type});
                                 if (i.front()->name.empty()) {
                                     *out.back().front() = *j.front();
+                                    check(out.back().front()->data, i.front()->data);
+                                    check(i.front()->data, out.back().front()->data);
                                     apply_operator(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
                                     *out.back().front() = *i.front();
+                                    check(out.back().front()->data, j.front()->data);
+                                    check(j.front()->data, out.back().front()->data);
                                     apply_operator(out.back().front()->data, j.front()->data, op);
                                 }
                             }
@@ -651,15 +665,9 @@ namespace ast {
                         if (!ld.empty()) throw std::logic_error("Wrong using operator " + operations[op]);
                         return once_not(rd, orig);
                     }
-                    case AND: {
-                        return once_and(ld, rd);
-                    }
-                    case OR: {
-                        return once_or(ld, rd);
-                    }
-                    default: {
-                        throw std::runtime_error("unknown operator in ast::ast_node::get_variables");
-                    }
+                    case AND: { return once_and(ld, rd); }
+                    case OR: { return once_or(ld, rd); }
+                    default: { throw std::runtime_error("unknown operator in ast::ast_node::get_variables"); }
                 }
 
             }
@@ -680,18 +688,6 @@ namespace ast {
                     }
                 }
             }
-            // for (auto &i : write) {
-                // a < 3 || a > 4
-                // {{a; b < 3}; {a; b > 4}}
-                // for (auto &j : buf) {
-                    // auto buf_index = 0;
-                    // for (auto &k : i) {
-                        // if (buf_index < j.size() && k->name == j[buf_index]->name) {
-                            // k = j[buf_index++];
-                        // }
-                    // }
-                // }
-            // }
         }
 
         void tree() const {
