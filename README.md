@@ -1,28 +1,40 @@
-**Необходимо предустановить**
+**Необходимые зависимости**
 ---
-    cmake, ninja, gcc, g++, make
+    cmake, gcc, g++, make
 
 ***Специфичные зависимости***
 
-    Windows: choco
+    Windows: ninja, choco
     Macos: brew
+Если в системе каких-то зависимостей нет, 
+они будут установлены автоматически.
 
 **Установка**
 ---
-***Общие шаги***
+***Linux/Macos***
 
     git clone https://github.com/xm200/CodeTest
     cd CodeTest
-
-***Linux/Macos***
-
-    chmod +x install_unix.sh
-    sudo install_unix.sh
+    ./configure.sh
+    make
+    sudo make install
 
 ***Windows***
 
     В консоли администратора запустить:
-        .\install.ps1
+    git clone https://github.com/xm200/CodeTest
+    cd CodeTest
+    .\install.ps1
+
+**Использование**:
+---
+***Linux/Macos***
+
+    codetest [attributes] path_to_file
+
+***Windows***
+
+    codetest.exe [attributes] path_to_file
 
 **Основные аргументы**:
 ---
@@ -31,15 +43,8 @@
         -B / --bfs: use BFS (default using DFS algo)
         -D / --dfs: use DFS
     -v / --verbose: print additional info
-    -o path / --output path: path to output file (default - output.txt in dir testing file)
-    -C / --cfg: print CFG tree
-
-**Использование**:
----
-***Linux/Macos***
-
-    ./CodeTest [attributes] path_to_file
-
-***Windows***
-
-    .\CodeTest.exe [attributes] path_to_file
+    -o path / --output path: path to output file 
+        default - output.txt in dir with testing file
+        if you write -o -- / --output --, generated data will be written to stdout
+    -c / --cfg: print CFG tree
+    -C / --cfg-only: print CFG tree without generating data

@@ -1,0 +1,7 @@
+root
+|---if a > 0.0:
+....|---if b < "cd":
+....|---elif b == "alias" or c == 3:
+....|---elif d == 3:
+....|---else:
+|---else:

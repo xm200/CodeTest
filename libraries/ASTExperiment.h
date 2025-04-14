@@ -112,9 +112,9 @@ namespace custom {
 
     [[nodiscard]] str_type inline erase_spaces(const str_type &other) {
         size_t l = 0, r = other.size();
-        while (other[l] == ' ' && l < other.size()) ++l;
-        if (l == other.size()) throw std::logic_error("empty string if function erase_spaces");
-        while (other[r - 1] == ' ' && r > 0) --r;
+        while (l < other.size() && other[l] == ' ') ++l;
+        if (l == other.size()) return other.substr(0, 0);
+        while (r > 0 && other[r - 1] == ' ') --r;
         return other.substr(l,  r - l);
     }
 
@@ -152,12 +152,13 @@ namespace custom {
             if ((s.front() == '\'' && s.back() == '\'') || (s.front() == '\"' && s.back() == '\"')) return STRING;
             bool has_dot = false;
             if (s.size() == 1 && s.front() == '.') return NONE;
-            for (const auto chr: s) {
-                if (chr == '.') {
+            for (auto i = 0; i < s.size(); ++i) {
+                if (s[i] == '-' && i == 0) continue;
+                if (s[i] == '.') {
                     if (has_dot) throw std::runtime_error("Function get_type() : double dot in integer-like type!");
                     has_dot = true;
                 }
-                else if (chr > '9' || chr < '0') return NONE;
+                else if (s[i] > '9' || s[i] < '0') return NONE;
             }
             return has_dot ? FLOAT : INT;
         }
@@ -406,6 +407,9 @@ namespace ast {
 
             for (auto i = 0; i < search.size(); ++i) {
                 if (search[i] != -1) {
+                    if (i == MN) {
+                        if (erase_spaces(s.substr(0, search[i])).size() == 0) break;
+                    }
                     l = new ast_node(this);
                     r = new ast_node(this);
                     op = i;
@@ -630,7 +634,7 @@ namespace ast {
                             for (auto &j : rd) {
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
-                                out.push_back({{new custom::custom_type}});
+                                out.push_back({new custom::custom_type});
                                 if (i.front()->name.empty()) {
                                     *out.back().front() = *j.front();
                                     apply_operator(out.back().front()->data, i.front()->data, op);
@@ -664,19 +668,30 @@ namespace ast {
 
         static void cmpPush(variables_t &write, const variables_t &orig) {
             auto buf = write;
-            write = orig;
-            for (auto &i : write) {
-                /// a < 3 || a > 4
-                /// {{a; b < 3}; {a; b > 4}}
+            write.clear();
+            for (auto &i : orig) {
                 for (auto &j : buf) {
+                    write.push_back(i);
                     auto buf_index = 0;
-                    for (auto &k : i) {
+                    for (auto &k : write.back()) {
                         if (buf_index < j.size() && k->name == j[buf_index]->name) {
                             k = j[buf_index++];
                         }
                     }
                 }
             }
+            // for (auto &i : write) {
+                // a < 3 || a > 4
+                // {{a; b < 3}; {a; b > 4}}
+                // for (auto &j : buf) {
+                    // auto buf_index = 0;
+                    // for (auto &k : i) {
+                        // if (buf_index < j.size() && k->name == j[buf_index]->name) {
+                            // k = j[buf_index++];
+                        // }
+                    // }
+                // }
+            // }
         }
 
         void tree() const {
@@ -702,7 +717,7 @@ namespace ast {
                 }
                 case custom::custom_type::STRING: {
                     interval::interval<std::string> buf;
-                    buf.add_point(s);
+                    buf.add_point(s.substr(1, s.size() - 2));
                     ret.data = buf;
                     break;
                 }
