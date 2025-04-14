@@ -105,6 +105,9 @@ namespace custom {
         }
     };
 
+    std::vector<std::string> inline operations =
+        {"=", "and", "or", "==", "!=",  ">=", "<=", ">", "<", "+", "-", "//", "%"};
+
     using str_type = vec_line<std::string>;
 
     [[nodiscard]] str_type inline erase_spaces(const str_type &other) {
@@ -224,12 +227,6 @@ namespace custom {
         friend inner_type & operator%=(inner_type &a, const inner_type &b)
                 { checkType(a, b, "%="); a = (a % b); return a; }
 
-        void rollback() const {
-            auto obj = this;
-            while (obj->history.second != nullptr) {
-
-            }
-        }
     protected:
 
         template<typename T>
@@ -444,7 +441,7 @@ namespace ast {
                 case ME: a = a >= b; break;
                 case LS: a = a < b; break;
                 case LE: a = a <= b; break;
-                default: throw std::runtime_error("unknown operator in ast::ast_node::apply_operator");
+                default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
             }
         }
 
@@ -640,12 +637,10 @@ namespace ast {
                                 out.push_back({new custom::custom_type});
                                 if (i.front()->name.empty()) {
                                     *out.back().front() = *j.front();
-                                    out.back().front()->history = {op, i.front()};
                                     apply_operator(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
                                     *out.back().front() = *i.front();
-                                    out.back().front()->history = {op, j.front()};
                                     apply_operator(out.back().front()->data, j.front()->data, op);
                                 }
                             }
@@ -685,6 +680,18 @@ namespace ast {
                     }
                 }
             }
+            // for (auto &i : write) {
+                // a < 3 || a > 4
+                // {{a; b < 3}; {a; b > 4}}
+                // for (auto &j : buf) {
+                    // auto buf_index = 0;
+                    // for (auto &k : i) {
+                        // if (buf_index < j.size() && k->name == j[buf_index]->name) {
+                            // k = j[buf_index++];
+                        // }
+                    // }
+                // }
+            // }
         }
 
         void tree() const {
@@ -768,7 +775,3 @@ namespace ast {
 
 // not {{a; b}, {c; d}, {e; f}}
 // {{a, c, e}, {a, d, }}
-
-// a += 3
-// a *= 5
-// -> ()

@@ -3,6 +3,7 @@
 
 
 #include <fstream>
+#include <iomanip>
 #include <utility>
 #include <string>
 #include <vector>
@@ -96,8 +97,8 @@ namespace parse {
        void write_to_file() {
             for (const auto& it : tests) {
                 if (it.empty()) continue;
-                if (out_path == "--") std::cout << it << std::endl;
-                else out << it << '\n';
+                if (out_path == "--") std::cout << std::setprecision(13) << it << std::endl;
+                else out << std::setprecision(13) << it << '\n';
             }
             if (out_path != "--") out << std::flush;
        }
@@ -293,7 +294,7 @@ namespace parse {
             auto x = std::get<interval::interval<T>>(what.value()).any();
             if (x == std::nullopt) return "";
             std::stringstream ss;
-            ss << x.value();
+            ss << std::setprecision(13) << x.value();
             return ss.str();
         }
 
