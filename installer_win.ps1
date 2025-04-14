@@ -11,7 +11,6 @@ Write-Host "    - choco / Chocolatey"
 Write-Host "    - gcc/g++ / GNU Compiler Collection"
 Write-Host "    - cmake / CMake"
 Write-Host "    - ninja / Ninja-build"
-Write-Host "    - make"
 Write-Host ""
 Write-Host ""
 Write-Host "------------------------------------------------"
@@ -146,3 +145,4 @@ $env:CXX = $($script:paths_to_utilities["g++"].ToString()).ToString().Trim()
 
 Write-Host ""
 Write-Host "Installation complete." -ForegroundColor Blue
+Write-Host "Usage .\codetest.exe --help"

@@ -1,3 +1,4 @@
+#!/bin/bash
 # Banner
 echo "------------------------------------------------"
 echo ""
@@ -10,27 +11,26 @@ echo "This programs will be installed, if they are not installed yet:"
 echo "    - gcc/g++ / GNU Compiler Collection"
 echo "    - cmake / CMake"
 echo "    - ninja / Ninja-build"
-echo "    - make"
 echo ""
 echo ""
 echo "------------------------------------------------"
 echo ""
 
-if [[ "$EUID" -ne 0 ]]
+if [ $(id -u) -ne 0 ]
 then
   echo "Run installer as root"
   exit
 fi
 
-sub_install() {
+sub_install () {
   local tmp_path
   tmp_path=$(which "$1")
-  if [[ $tmp_path == "" ]]
+  if [ -z "$tmp_path" ]
   then
     echo -n "$1 is not installed. Install it? CodeTest would not work without it. [Y/n]: "
     ans=""
     read -r ans
-    if [[ $ans == "Y" || $ans == "" || $ans == "y" ]]
+    if [[ "$ans" -eq "Y" ]] || [ -z "$ans" ] || [[ "$ans" -eq "y" ]]
     then
       sudo apt update
       sudo apt install "$2"
@@ -40,9 +40,9 @@ sub_install() {
     fi
   fi
   tmp_path=$(which "$1")
-  if [[ $tmp_path == "" ]]
+  if [ -z "$tmp_path" ]
     then
-      echo "Something wrong"
+      echo "Something went wrong"
       exit 1
   fi
 }
@@ -54,4 +54,5 @@ sub_install "g++" "g++"
 
 cmake -G "Ninja" .
 cmake --build .
-sudo make install
+
+echo "Builded! Usage: ./codetest --help"
