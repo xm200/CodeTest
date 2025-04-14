@@ -414,7 +414,7 @@ namespace ast {
                         if (s.substr(i, operations[j].size()).extract() == operations[j] &&
                                     !std::isalpha(s[i + operations[j].size()])) {
                             search[j] = i;
-                        }
+                                    }
                     }
                 }
             }
@@ -434,9 +434,14 @@ namespace ast {
             }
 
             //no operator found
-            const auto type = custom::custom_type::extract_type_from_string(s.extract());
-            data = new custom::custom_type;
-            *data.value() = (dereference_cast(s.extract(), type));
+            if (l == nullptr || r == nullptr) {
+                const auto type = custom::custom_type::extract_type_from_string(s.extract());
+                data = new custom::custom_type;
+                *data.value() = (dereference_cast(s.extract(), type));
+            } else {
+                *data.value() = *l->data.value();
+                apply_operator(data.value()->data, r->data.value()->data, op);
+            }
 
         }
 
