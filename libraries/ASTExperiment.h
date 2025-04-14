@@ -227,6 +227,13 @@ namespace custom {
         friend inner_type & operator%=(inner_type &a, const inner_type &b)
                 { checkType(a, b, "%="); a = (a % b); return a; }
 
+        void rollback() const {
+            auto obj = this;
+            while (obj->history.second != nullptr) {
+
+            }
+        }
+
     protected:
 
         template<typename T>
@@ -414,7 +421,7 @@ namespace ast {
                         if (s.substr(i, operations[j].size()).extract() == operations[j] &&
                                     !std::isalpha(s[i + operations[j].size()])) {
                             search[j] = i;
-                                    }
+                        }
                     }
                 }
             }
@@ -460,7 +467,7 @@ namespace ast {
                 case ME: a = a >= b; break;
                 case LS: a = a < b; break;
                 case LE: a = a <= b; break;
-                default: throw std::runtime_error("unknown operator in ast::ast_node::get_variables::fun");
+                default: throw std::runtime_error("unknown operator in ast::ast_node::apply_operator");
             }
         }
 
@@ -668,12 +675,14 @@ namespace ast {
                                     *out.back().front() = *j.front();
                                     check(out.back().front()->data, i.front()->data);
                                     check(i.front()->data, out.back().front()->data);
+                                    out.back().front()->history = {op, i.front()};
                                     apply_operator(out.back().front()->data, i.front()->data, op);
                                 }
                                 else {
                                     *out.back().front() = *i.front();
                                     check(out.back().front()->data, j.front()->data);
                                     check(j.front()->data, out.back().front()->data);
+                                    out.back().front()->history = {op, j.front()};
                                     apply_operator(out.back().front()->data, j.front()->data, op);
                                 }
                             }
