@@ -232,10 +232,18 @@ namespace custom {
         template<typename T>
         [[nodiscard]] static inner_type less_in(
                 const std::function<void(interval::interval<T> &it, const inner_type &a)> &it,
-                const inner_type &a,
-                const inner_type &b,
+                inner_type &a,
+                inner_type &b,
                 const std::string &n) {
             checkType(a, b, n);
+            auto check = [](const inner_type &a, inner_type &b) -> void {
+                if (get_in_type(a) == FLOAT) {
+                    if (get_in_type(b) == INT)
+                        b = std::get<interval::interval<typeInt>>(b.value()).cast<typeFloat>();
+                }
+            };
+            check(a, b);
+            check(b, a);
             interval::interval<T> buf;
             it(buf, b);
             return buf * std::get<interval::interval<T>>(a.value());
@@ -254,81 +262,87 @@ namespace custom {
 
         template<typename T>
         [[nodiscard]] static inner_type less(const inner_type &a, const inner_type &b) {
+            inner_type c = a, d = b;
             return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
                 buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.value()).any().value());
-            }, a, b, "<");
+            }, c, d, "<");
         }
 
         template<typename T>
         [[nodiscard]] static inner_type more(const inner_type &a, const inner_type &b) {
+            inner_type c = a, d = b;
             return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
                 buf.add_interval(std::get<interval::interval<T>>(a.value()).any().value(),interval::maximal<T>());
-            }, a, b, ">");
+            }, c, d, ">");
         }
 
         template<typename T>
         [[nodiscard]] static inner_type less_equal(const inner_type &a, const inner_type &b) {
+            inner_type c = a, d = b;
             return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
                 buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.value()).any().value());
                 buf.add_point(std::get<interval::interval<T>>(a.value()).any().value());
-            }, a, b, "<=");
+            }, c, d, "<=");
         }
 
         template<typename T>
         [[nodiscard]] static inner_type more_equal(const inner_type &a, const inner_type &b) {
+            inner_type c = a, d = b;
             return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
                 buf.add_interval(std::get<interval::interval<T>>(a.value()).any().value(), interval::maximal<T>());
                 buf.add_point(std::get<interval::interval<T>>(a.value()).any().value());
-            }, a, b, ">=");
+            }, c, d, ">=");
         }
 
         template<typename T>
         [[nodiscard]] static inner_type equal(const inner_type &a, const inner_type &b) {
+            inner_type c = a, d = b;
             return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
                 buf.add_point(std::get<interval::interval<T>>(a.value()).any().value());
-            }, a, b, "==");
+            }, c, d, "==");
         }
 
         template<typename T>
         [[nodiscard]] static inner_type not_equal(const inner_type &a, const inner_type &b) {
+            inner_type c = a, d = b;
             return less_in<T>([](interval::interval<T> &buf, const inner_type &a) {
                 buf.add_interval(std::get<interval::interval<T>>(a.value()).any().value(), interval::maximal<T>());
                 buf.add_interval(interval::minimal<T>(), std::get<interval::interval<T>>(a.value()).any().value());
-            }, a, b, "!=");
+            }, c, d, "!=");
         }
 
         template<typename T>
         [[nodiscard]] static inner_type add(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "+");
-            return std::get<interval::interval<T>>(a.value())
-                   + std::get<interval::interval<T>>(b.value()).any().value();
+            inner_type c = a, d = b;
+            return std::get<interval::interval<T>>(c.value())
+                   + std::get<interval::interval<T>>(d.value()).any().value();
         }
 
         template<typename type>
         [[nodiscard]] static inner_type subtract(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "-");
-            return std::get<interval::interval<type>>(a.value())
-                   - std::get<interval::interval<type>>(b.value()).any().value();
+            inner_type c = a, d = b;
+            return std::get<interval::interval<type>>(c.value())
+                   - std::get<interval::interval<type>>(d.value()).any().value();
         }
 
         template<typename type>
         [[nodiscard]] static inner_type multiply(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "*");
-            return std::get<interval::interval<type>>(a.value())
-                   * std::get<interval::interval<type>>(b.value()).any().value();
+            inner_type c = a, d = b;
+            return std::get<interval::interval<type>>(c.value())
+                   * std::get<interval::interval<type>>(d.value()).any().value();
         }
 
         template<typename type>
         [[nodiscard]] static inner_type divide(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "/");
-            return std::get<interval::interval<type>>(a.value())
-                   / std::get<interval::interval<type>>(b.value()).any().value();
+            inner_type c = a, d = b;
+            return std::get<interval::interval<type>>(c.value())
+                   / std::get<interval::interval<type>>(d.value()).any().value();
         }
 
         [[nodiscard]] static inner_type mod(const inner_type &a, const inner_type &b) {
-            checkType(a, b, "%");
-            return std::get<interval::interval<typeInt>>(a.value())
-                   % std::get<interval::interval<typeInt>>(b.value()).any().value();
+            inner_type c = a, d = b;
+            return std::get<interval::interval<typeInt>>(c.value())
+                   % std::get<interval::interval<typeInt>>(d.value()).any().value();
         }
     };
 
