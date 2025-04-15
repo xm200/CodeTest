@@ -1,26 +1,4 @@
 #!/bin/bash
-# Banner
-echo "------------------------------------------------"
-echo ""
-echo ""
-echo "Welcome! It is CodeTest installer for Linux."
-echo ""
-echo "You must have administrator rights for installation"
-echo ""
-echo "This programs will be installed, if they are not installed yet:"
-echo "    - make"
-echo "    - cmake / CMake"
-echo "    - gcc/g++ / GNU Compiler Collection"
-echo ""
-echo ""
-echo "------------------------------------------------"
-echo ""
-
-if [ $(id -u) -ne 0 ]
-then
-  echo "Run installer as root"
-  exit
-fi
 
 mac=0
 
@@ -28,6 +6,31 @@ if [ "$(uname)" == "Darwin" ]
 then
   mac=1
 fi
+
+# Banner
+echo "------------------------------------------------"
+echo ""
+echo ""
+echo -n "Welcome! It is CodeTest installer for "
+if [ $mac == 1 ]
+then
+   echo "Macos."
+else
+   echo "Linux."
+fi
+echo ""
+echo "This programs will be installed, if they are not installed yet:"
+if [ $mac == 1 ]
+then
+  echo "    - brew / Homebrew"
+fi
+echo "    - make"
+echo "    - cmake / CMake"
+echo "    - gcc/g++ / GNU Compiler Collection"
+echo ""
+echo ""
+echo "------------------------------------------------"
+echo ""
 
 sub_install () {
   local tmp_path
@@ -48,7 +51,7 @@ sub_install () {
           sudo apt update
           sudo apt install "$2"
         else
-          sudo brew install "$2"
+          brew install "$2"
         fi
       else
         echo "Installation canceled by user."

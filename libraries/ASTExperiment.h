@@ -445,7 +445,7 @@ namespace ast {
                 const auto type = custom::custom_type::extract_type_from_string(s.extract());
                 data = new custom::custom_type;
                 *data.value() = (dereference_cast(s.extract(), type));
-            } else {
+            } else { // if a + 3 < 5
                 *data.value() = *l->data.value();
                 apply_operator(data.value()->data, r->data.value()->data, op);
             }

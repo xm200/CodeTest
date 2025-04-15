@@ -253,32 +253,9 @@ namespace parse {
                     case '-':
                     case '*':
                     case '/': {
-                        if (s[i + 1] != '=') {
-                            auto _root = ast::generate_ast(s);
-                            auto buf = _root->get_variables(orig);
-
-                            for (auto &var: buf) {
-                                auto res = var.front();
-                                auto *x = new custom::custom_type;
-                                *x = *res;
-                                res->name = custom::erase_spaces(s.substr(0, i)).extract();
-                                res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
-
-                                for (auto &k : ans) {
-                                    bool found = false;
-                                    for (auto &j : k) {
-                                        if (j->name == custom::erase_spaces(s.substr(0, i)).extract()) { j = res; found = true; break; }
-                                    }
-                                    if (found) continue;
-                                    k.push_back(res);
-                                    std::sort(k.begin(), k.end());
-                                }
-                            }
-                            return ans;
-                        }
                         const auto left = s.substr(0, i);
-                        const auto right = s.substr(i + 2);
-                        const std::string buf = custom::erase_spaces(left).extract() + " " + (s[i] == '/' ? "//" : std::string(1, s[i])) + " (" + custom::erase_spaces(right).extract() + ")";
+                        const auto right = s.substr(i + ((s.substr(i, 3).extract() == "//=") ? 3 : 2));
+                        const std::string buf = custom::erase_spaces(left).extract() + " = " + custom::erase_spaces(left).extract() + " " + (s[i] == '/' ? "//" : std::string(1, s[i])) + " (" + custom::erase_spaces(right).extract() + ")";
                         custom::str_type res(buf);
                         return translate(res, orig);
                     }
