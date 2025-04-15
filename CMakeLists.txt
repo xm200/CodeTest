@@ -55,5 +55,7 @@ add_test(NAME test_rollback_generation_dfs COMMAND $<TARGET_FILE:test_checker> 7
 add_test(NAME test_rollback_generation_bfs COMMAND $<TARGET_FILE:test_checker> 7 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 target_link_libraries(codetest -static)
+target_link_libraries(test_lib_interval -static)
+target_link_libraries(test_checker -static)
 
 install(TARGETS codetest DESTINATION bin)

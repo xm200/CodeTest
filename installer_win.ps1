@@ -46,7 +46,7 @@ function CheckInstalled {
 Write-Host "Started checking installed utilities..."
 Write-Host ""
 
-$script:check_installation = @("choco", "gcc", "g++", "cmake", "ninja")
+$script:check_installation = @("choco", "gcc", "g++", "cmake", "ninja", "ctest")
 
 foreach ($util in $script:check_installation) {
     Write-Host "Checking $util" -ForegroundColor Cyan
@@ -140,9 +140,8 @@ $env:CC = $($script:paths_to_utilities["gcc"].ToString()).ToString().Trim()
 $env:CXX = $($script:paths_to_utilities["g++"].ToString()).ToString().Trim()
 
 & $script:paths_to_utilities["cmake"] -G "Ninja" .
-& $script:paths_to_utilities["make"]
-& $script:paths_to_utilities["make"] test
-& $script:paths_to_utilities["make"] install
+& $script:paths_to_utilities["cmake"] --build .
+& $script:paths_to_utilities["ctest"]
 
 
 Write-Host ""
