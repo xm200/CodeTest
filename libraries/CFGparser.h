@@ -480,14 +480,22 @@ namespace parse {
                             auto buf = code->operator[](i);
                             custom::str_type res(buf);
                             auto buffer_vars = translate(res, snd);
-                            if (!buffer_vars.empty())
+                            if (!buffer_vars.empty()) {
                                 snd = buffer_vars;
+                                for (auto &x : snd) {
+                                    for (const auto &y : x) {
+                                        // cache.get_tests_set().insert(from_any_to_str(y->data));
+                                        y->rollback(snd);
+                                    }
+                                }
+                            }
                             break;
                     }
                 }
                 for (auto &x : snd) {
                     for (const auto &y : x) {
-                        cache.get_tests_set().insert(from_any_to_str(y->data));
+                        // cache.get_tests_set().insert(from_any_to_str(y->data));
+                        y->rollback(snd);
                     }
                 }
             }
