@@ -711,6 +711,7 @@ namespace ast {
                             auto c = new custom::custom_type;
                             *c = *b;
                             c->data = std::get<interval::interval<typeInt>>(b->data.value()).cast<typeFloat>();
+                            c->reset_type();
                             return c;
                         }
                     }
