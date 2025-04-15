@@ -432,16 +432,16 @@ namespace ast {
             for (auto i = 0; i < a.size(); i++) {
                 if (a[i]->name != b[i]->name) return a[i]->name < b[i]->name;
                 if (a[i]->type != b[i]->type) return a[i]->type < b[i]->type;
-                if (fun(a[i]->data, b[i]->data)) return false;
+                if (fun(a[i]->data, b[i]->data)) return a < b;
             }
-            return a < b;
+            return false;
         }
         init_struct_cession(a, [[nodiscard]] bool fun(custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) const)
             enable_all_types(fun, a, b)
         close_cession(T)
         [[nodiscard]] bool fun(custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) const {
-            if (std::get<interval::interval<T>>(a.value()) == std::get<interval::interval<T>>(b.value())) return true;
-            return false;
+            if (std::get<interval::interval<T>>(a.value()) == std::get<interval::interval<T>>(b.value())) return false;
+            return true;
         }
     };
     inline std::size_t inverse_operator(const std::size_t op) {
