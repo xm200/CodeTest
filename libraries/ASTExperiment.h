@@ -637,11 +637,16 @@ namespace ast {
                 }
             }
             else {
-                auto check = [](const custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) -> void {
-                    if (custom::get_in_type(a) == custom::custom_type::types::FLOAT) {
-                        if (custom::get_in_type(b) == custom::custom_type::types::INT)
-                            b = std::get<interval::interval<typeInt>>(b.value()).cast<typeFloat>();
+                auto check = [](const custom::custom_type &a, custom::custom_type *b) -> custom::custom_type* {
+                    if (custom::get_in_type(a.data.value()) == custom::custom_type::types::FLOAT) {
+                        if (custom::get_in_type(b->data.value()) == custom::custom_type::types::INT) {
+                            auto c = new custom::custom_type;
+                            *c = *b;
+                            c->data = std::get<interval::interval<typeInt>>(b->data.value()).cast<typeFloat>();
+                            return c;
+                        }
                     }
+                    return b;
                 };
                 variables_t ld, rd = r->get_variables(orig);
                 if (op != NT) ld = l->get_variables(orig);
@@ -673,17 +678,17 @@ namespace ast {
                                 out.push_back({new custom::custom_type});
                                 if (i.front()->name.empty()) {
                                     *out.back().front() = *j.front();
-                                    check(out.back().front()->data, i.front()->data);
-                                    check(i.front()->data, out.back().front()->data);
+                                    auto a = check(*out.back().front(), i.front());
+                                    auto b = check(*a, out.back().front());
                                     out.back().front()->history = {op, i.front()};
-                                    apply_operator(out.back().front()->data, i.front()->data, op);
+                                    apply_operator(b->data, a->data, op);
                                 }
                                 else {
                                     *out.back().front() = *i.front();
-                                    check(out.back().front()->data, j.front()->data);
-                                    check(j.front()->data, out.back().front()->data);
+                                    auto a = check(*out.back().front(), j.front());
+                                    auto b = check(*j.front(), out.back().front());
                                     out.back().front()->history = {op, j.front()};
-                                    apply_operator(out.back().front()->data, j.front()->data, op);
+                                    apply_operator(b->data, a->data, op);
                                 }
                             }
                         }
