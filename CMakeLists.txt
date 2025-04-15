@@ -16,7 +16,7 @@ add_compile_definitions(typeInt=long\ long)
 add_compile_definitions(typeFloat=long\ double)
 
 set(CMAKE_CXX_STANDARD 17)
-option(DEBUG "Provide debug mode" ON)
+option(DEBUG "Provide debug mode" OFF)
 
 if (DEBUG)
     add_compile_definitions(DEBUG_MODE)
