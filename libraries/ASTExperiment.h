@@ -714,6 +714,7 @@ namespace ast {
                             return c;
                         }
                     }
+                    return b;
                 };
                 variables_t ld, rd = r->get_variables(orig, save);
                 if (op != NT) ld = l->get_variables(orig, save);
