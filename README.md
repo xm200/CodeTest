@@ -16,6 +16,7 @@
 
     git clone https://github.com/xm200/codetest
     cd codetest
+    chmod +x configure.sh
     ./configure.sh
     make
     sudo make install
