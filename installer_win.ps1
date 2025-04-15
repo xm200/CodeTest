@@ -140,7 +140,9 @@ $env:CC = $($script:paths_to_utilities["gcc"].ToString()).ToString().Trim()
 $env:CXX = $($script:paths_to_utilities["g++"].ToString()).ToString().Trim()
 
 & $script:paths_to_utilities["cmake"] -G "Ninja" .
-& $script:paths_to_utilities["cmake"] --build .
+& $script:paths_to_utilities["make"]
+& $script:paths_to_utilities["make"] test
+& $script:paths_to_utilities["make"] install
 
 
 Write-Host ""
