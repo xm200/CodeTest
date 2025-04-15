@@ -16,12 +16,6 @@ echo ""
 echo "------------------------------------------------"
 echo ""
 
-if [ $(id -u) -ne 0 ]
-then
-  echo "Run installer as root"
-  exit
-fi
-
 mac=0
 
 if [ "$(uname)" == "Darwin" ]
@@ -48,7 +42,11 @@ sub_install () {
           sudo apt update
           sudo apt install "$2"
         else
-          sudo brew install "$2"
+          if [ $mac == 1 ]
+          then
+            sub_install "brew"
+          fi
+          brew install "$2"
         fi
       else
         echo "Installation canceled by user."
@@ -64,11 +62,6 @@ sub_install () {
   fi
 }
 
-if [ $mac == 1 ]
-then
-  sub_install "brew"
-fi
-
 
 sub_install "make" "build-essential"
 sub_install "cmake" "cmake"
@@ -76,7 +69,5 @@ sub_install "gcc" "gcc"
 sub_install "g++" "g++"
 
 cmake .
-make
-sudo make install
 
 echo "Built! Usage: codetest --help"

@@ -1,17 +1,12 @@
-a = 0.0
-b = "\""
-c = 1234
-d = int(input())
-e = float(input())
-f = input()
-if a > 0.0:
-    if b < "cd":
-        pass
-    elif b == "alias" or c == 3:
-        c = c + 2
-    elif d == 3:
-        print("work")
+a = int(input())
+b = int(input())
+if a < 3:
+    print("abc")
+    if b > 10:
+        print("l")
+    elif b > 5:
+        print("m")
     else:
-        print("123")
+        print("s")
 else:
-    pass
+    print("b")
