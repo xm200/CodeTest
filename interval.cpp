@@ -46,8 +46,7 @@
                                   ==        Ð§Ñ ÑÐ¼Ð¾ÑÑÐ¸ÑÑ
 */
 #include "libraries/interval.h"
-#include <bits/stdc++.h>
-
+#include <iostream>
 int main() {
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
