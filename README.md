@@ -1,3 +1,14 @@
+**Что такое CodeTest?**
+---
+
+---
+**Это программа для выработки тестов с высоким покрытием на основе исходного кода на python версии 3 и старше.**
+
+---
+**Целевая аудитория - небольшие команды разработчиков, которые хотят протестировать свой код на неверную обработку данных.**
+
+---
+
 **Необходимые зависимости**
 ---
     cmake, gcc, g++, git
@@ -23,9 +34,23 @@
 ***Windows***
 
     В консоли администратора запустить:
-    git clone https://github.com/xm200/codetest
-    cd codetest
-    .\install.ps1
+        git clone https://github.com/xm200/codetest
+        cd codetest
+        .\install.ps1
+
+**Основные аргументы**:
+---
+    --help, увидеть эту справочную информацию
+    Для алгоритма извлечения графа
+        -B / --bfs: использовать BFS (по умолчанию используется алгоритм DFS)
+        -D / --dfs: использовать DFS
+    -v / --verbose: повысить подробность
+    -o [path] / --output [path]: путь, по которому создать файл с тестами 
+        по умолчанию output.txt в той же папке, в которой находится тестируемый файл
+        Для выведения в стандартный поток вывода: -o -- / --output --
+    -c / --cfg: Вывести CFG и выработать данные
+    -C / --cfg-only: Вывести CFG и не вырабатывать данные
+
 
 **Использование**:
 ---
@@ -46,18 +71,3 @@
 ---
     Linux/Macos:
         codetest --cfg-only -v -o -- test.py
-
----
-
-**Основные аргументы**:
----
-    --help, to see this help
-    Graph extracting algorithm
-        -B / --bfs: use BFS (default using DFS algo)
-        -D / --dfs: use DFS
-    -v / --verbose: print additional info
-    -o path / --output path: path to output file 
-        default - output.txt in dir with testing file
-        if you write -o -- / --output --, generated data will be written to stdout
-    -c / --cfg: print CFG tree
-    -C / --cfg-only: print CFG tree without generating data
