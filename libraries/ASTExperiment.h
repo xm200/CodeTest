@@ -765,9 +765,9 @@ namespace ast {
                     // write.push_back(i);
                     std::vector<custom::custom_type*> w = i;
                     auto buf_index = 0;
-                    for (auto &k : w) {
+                    for (const auto &k : w) {
                         if (buf_index < j.size() && k->name == j[buf_index]->name) {
-                            k = j[buf_index++];
+                            *k = *j[buf_index++];
                         }
                     }
                     tmp.insert(w);

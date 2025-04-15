@@ -1,5 +1,5 @@
 a = int(input())
-if a < 3:
+if a < 4:
     a = a + 5
     if a > 4:
         pass
