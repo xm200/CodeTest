@@ -258,6 +258,10 @@ namespace custom {
             if (parent == nullptr) {
                 return a;
             }
+            if (history.first == ast::operations::NT) {
+                const std::string s = "( not " + a + ")";
+                return parent->rollback_in(s);
+            }
             if (history.first <= ast::operations::LS) return parent->rollback_in(a);
 
             const std::string s = "(" + a + " " + inverse_operator(history.first) + " " + history.second->rollback_in() + ")";
@@ -420,6 +424,26 @@ namespace custom {
 
 namespace ast {
     using variables_t = std::vector<std::vector<custom::custom_type*>>;
+    struct vacuum_cleaner {
+        [[nodiscard]] bool operator ()(const std::vector<custom::custom_type*> &a,
+                                       const std::vector<custom::custom_type*> &b) const{
+            if (a.size() < b.size()) return false;
+            if (a.size() > b.size()) return true;
+            for (auto i = 0; i < a.size(); i++) {
+                if (a[i]->name != b[i]->name) return a[i]->name < b[i]->name;
+                if (a[i]->type != b[i]->type) return a[i]->type < b[i]->type;
+                if (fun(a[i]->data, b[i]->data)) return a < b;
+            }
+            return false;
+        }
+        init_struct_cession(a, [[nodiscard]] bool fun(custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) const)
+            enable_all_types(fun, a, b)
+        close_cession(T)
+        [[nodiscard]] bool fun(custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) const {
+            if (std::get<interval::interval<T>>(a.value()) == std::get<interval::interval<T>>(b.value())) return false;
+            return true;
+        }
+    };
     inline std::size_t inverse_operator(const std::size_t op) {
         switch (op) {
             case MO: return LE;
@@ -489,9 +513,6 @@ namespace ast {
                 const auto type = custom::custom_type::extract_type_from_string(s.extract());
                 data = new custom::custom_type;
                 *data.value() = (dereference_cast(s.extract(), type));
-            } else {
-                *data.value() = *l->data.value();
-                apply_operator(data.value()->data, r->data.value()->data, op);
             }
 
         }
@@ -515,12 +536,13 @@ namespace ast {
             }
         }
 
-        init_struct_cession(a.data, static custom::custom_type not_reverse(const custom::custom_type &a))
+        init_struct_cession(a->data, static custom::custom_type not_reverse(custom::custom_type *a))
             enable_all_types(not_reverse, a)
         close_cession(T)
-        static custom::custom_type not_reverse(const custom::custom_type &a) {
-            auto out = a;
-            out.data = std::get<interval::interval<T>>(a.data.value()).invert();
+        static custom::custom_type not_reverse(custom::custom_type *a) {
+            auto out = *a;
+            out.data = std::get<interval::interval<T>>(a->data.value()).invert();
+            out.history = std::pair<std::size_t, custom::custom_type*>(NT, a);
             return out;
         }
 
@@ -531,7 +553,7 @@ namespace ast {
                 std::vector<custom::custom_type *> sub;
                 for (const auto &i : stack) {
                     sub.push_back(new custom::custom_type);
-                    *sub.back() = not_reverse(*i);
+                    *sub.back() = not_reverse(i);
                 }
                 std::sort(sub.begin(), sub.end(),
                     custom::dereferenced_sort_comparator<custom::custom_type>);
@@ -646,7 +668,7 @@ namespace ast {
 
         [[nodiscard]] static variables_t once_or(const variables_t &a, const variables_t &b) {
             variables_t ld = a, rd = b, out;
-            std::set<std::vector<custom::custom_type*>> buf_out;
+            std::set<std::vector<custom::custom_type*>, ast::vacuum_cleaner> buf_out;
             for (auto &i : ld) {
                 std::sort(i.begin(), i.end(),
                     custom::dereferenced_sort_comparator<custom::custom_type>);
@@ -663,9 +685,10 @@ namespace ast {
             return out;
         }
 
-        [[nodiscard]] variables_t get_variables(const variables_t &orig) const {
-            variables_t out;
+        [[nodiscard]] variables_t get_variables(const variables_t &orig, const bool save = true) const {
+            std::set<std::vector<custom::custom_type*>, ast::vacuum_cleaner> buf_out;
             if (data.has_value()) {
+                variables_t out;
                 for (const auto &v : orig) {
                     if (data.value()->name.empty()) {
                         out.push_back({data.value()});
@@ -679,17 +702,21 @@ namespace ast {
                         }
                     }
                 }
+                return out;
             }
             else {
-                auto check = [](const custom::custom_type::inner_type &a, custom::custom_type::inner_type &b) -> void {
-                    if (custom::get_in_type(a) == custom::custom_type::types::FLOAT) {
-                        if (custom::get_in_type(b) == custom::custom_type::types::INT)
-                            /// todo fix: WARNING: BROKEN_POLITIC::DESTRUCTED_ALLOCATOR
-                            b = std::get<interval::interval<typeInt>>(b.value()).cast<typeFloat>();
+                auto check = [](const custom::custom_type *a, custom::custom_type *b) -> custom::custom_type * {
+                    if (custom::get_in_type(a->data.value()) == custom::custom_type::types::FLOAT) {
+                        if (custom::get_in_type(b->data.value()) == custom::custom_type::types::INT) {
+                            auto c = new custom::custom_type;
+                            *c = *b;
+                            c->data = std::get<interval::interval<typeInt>>(b->data.value()).cast<typeFloat>();
+                            return c;
+                        }
                     }
                 };
-                variables_t ld, rd = r->get_variables(orig);
-                if (op != NT) ld = l->get_variables(orig);
+                variables_t ld, rd = r->get_variables(orig, save);
+                if (op != NT) ld = l->get_variables(orig, save);
                 for (auto &v : ld) std::sort(v.begin(), v.end(),
                         custom::dereferenced_sort_comparator<custom::custom_type>);
                 for (auto &v : rd) std::sort(v.begin(), v.end(),
@@ -709,29 +736,35 @@ namespace ast {
                     case LE: {
                         for (auto &i : ld) {
                             for (auto &j : rd) {
+                                std::vector<custom::custom_type*> out;
                                 if (i.front()->name == j.front()->name && !i.front()->name.empty()) {
-                                    out.push_back(i);
+                                    buf_out.insert(i);
                                     continue;
                                 }
                                 if (i.size() != 1 || j.size() != 1)
                                     throw std::logic_error("Wrong using operator " + operations[op]);
-                                out.push_back({new custom::custom_type});
+                                out = {new custom::custom_type};
                                 if (i.front()->name.empty()) {
-                                    *out.back().front() = *j.front();
-                                    check(out.back().front()->data, i.front()->data);
-                                    check(i.front()->data, out.back().front()->data);
-                                    out.back().front()->history = {op, i.front()};
-                                    out.back().front()->parent = j.front();
-                                    apply_operator(out.back().front()->data, i.front()->data, op);
+                                    *out.front() = *j.front();
+                                    auto c = check(out.front(), i.front());
+                                    auto d = check(i.front(), out.front());
+                                    if (save) {
+                                        out.front()->history = {op, i.front()};
+                                        out.front()->parent = j.front();
+                                    }
+                                    apply_operator(d->data, c->data, op);
                                 }
                                 else {
-                                    *out.back().front() = *i.front();
-                                    check(out.back().front()->data, j.front()->data);
-                                    check(j.front()->data, out.back().front()->data);
-                                    out.back().front()->history = {op, j.front()};
-                                    out.back().front()->parent = i.front();
-                                    apply_operator(out.back().front()->data, j.front()->data, op);
+                                    *out.front() = *i.front();
+                                    auto c = check(out.front(), j.front());
+                                    auto d = check(j.front(), out.front());
+                                    if (save) {
+                                        out.front()->history = {op, j.front()};
+                                        out.front()->parent = i.front();
+                                    }
+                                    apply_operator(d->data, c->data, op);
                                 }
+                                buf_out.insert(out);
                             }
                         }
                         break;
@@ -744,8 +777,9 @@ namespace ast {
                     case OR: { return once_or(ld, rd); }
                     default: { throw std::runtime_error("unknown operator in ast::ast_node::get_variables"); }
                 }
-
             }
+            variables_t out;
+            for (auto &i : buf_out) out.push_back(i);
             return out;
         }
 
@@ -759,7 +793,7 @@ namespace ast {
         static void cmpPush(variables_t &write, const variables_t &orig) {
             auto buf = write;
             write.clear();
-            std::set<std::vector<custom::custom_type*>> tmp;
+            std::set<std::vector<custom::custom_type*>, ast::vacuum_cleaner> tmp;
             for (auto &i : orig) {
                 for (auto &j : buf) {
                     // write.push_back(i);
