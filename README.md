@@ -14,8 +14,8 @@
 ---
 ***Linux/Macos***
 
-    git clone https://github.com/xm200/CodeTest
-    cd CodeTest
+    git clone https://github.com/xm200/codetest
+    cd codetest
     ./configure.sh
     make
     sudo make install
@@ -23,8 +23,8 @@
 ***Windows***
 
     В консоли администратора запустить:
-    git clone https://github.com/xm200/CodeTest
-    cd CodeTest
+    git clone https://github.com/xm200/codetest
+    cd codetest
     .\install.ps1
 
 **Использование**:
