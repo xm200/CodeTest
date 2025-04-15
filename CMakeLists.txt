@@ -51,6 +51,11 @@ add_test(NAME test_or_generation_bfs COMMAND $<TARGET_FILE:test_checker> 5 bfs W
 add_test(NAME test_not_generation_dfs COMMAND $<TARGET_FILE:test_checker> 6 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 add_test(NAME test_not_generation_bfs COMMAND $<TARGET_FILE:test_checker> 6 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
+add_test(NAME test_rollback_generation_dfs COMMAND $<TARGET_FILE:test_checker> 7 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_test(NAME test_rollback_generation_bfs COMMAND $<TARGET_FILE:test_checker> 7 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+
 target_link_libraries(codetest -static)
+target_link_libraries(test_lib_interval -static)
+target_link_libraries(test_checker -static)
 
 install(TARGETS codetest DESTINATION bin)

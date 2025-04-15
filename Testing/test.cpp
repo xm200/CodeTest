@@ -34,6 +34,8 @@ bool test_similar(const std::string &a, const std::string &b) {
     return test_similar(v, b);
 }
 
+std::vector dif = {false, false, false, false, false, false, true};
+
 int main(const int argc, char *argv[]) {
     std::cout << "***begin of test***" << std::endl;
     if (argc != 3) {
@@ -52,7 +54,7 @@ int main(const int argc, char *argv[]) {
         const auto x = p.tree();
         if (!test_similar(x, "Testing/test2.a")) return EXIT_FAILURE;
     }
-    else if (std::string_view(argv[1]).size() == 1 && argv[1][0] >= '3' && argv[1][0] <= '6') {
+    else if (std::string_view(argv[1]).size() == 1 && argv[1][0] >= '3' && argv[1][0] <= '7') {
         std::string path = "Testing/test" + std::string(argv[1]);
 
         parse::parser p
@@ -69,7 +71,12 @@ int main(const int argc, char *argv[]) {
         while (std::getline(inp, line)) {
             v.push_back(line);
         }
-        if (!test_similar(v, path + ".a")) return EXIT_FAILURE;
+        if (dif[argv[1][0] - '1']) {
+            if (!test_similar(v, path + "_" + std::string(argv[2]) + ".a")) return EXIT_FAILURE;
+        }
+        else {
+            if (!test_similar(v, path + ".a")) return EXIT_FAILURE;
+        }
     }
     else {
         std::cerr << "Usage: " << argv[0] << " test_num parser_algorithm" << std::endl;

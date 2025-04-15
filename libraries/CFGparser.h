@@ -150,6 +150,17 @@ namespace parse {
         node_t() = default;
     };
 
+    init_cession(what, std::string from_any_to_str(const custom::custom_type::inner_type &what))
+        enable_all_types(from_any_to_str, what)
+        close_cession(T)
+        std::string from_any_to_str(const custom::custom_type::inner_type &what) {
+        auto x = std::get<interval::interval<T>>(what.value()).any();
+        if (x == std::nullopt) return "";
+        std::stringstream ss;
+        ss << std::setprecision(13) << x.value();
+        return ss.str();
+    }
+
     class parser {
         const std::vector<std::string> *code;
     public:
@@ -174,7 +185,7 @@ namespace parse {
             return tree(root, s);
         }
 
-        static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
+        [[nodiscard]] static ast::variables_t translate(const custom::str_type &s, const ast::variables_t &orig) {
             auto check = [](const custom::str_type &s, const std::string_view it) {
                 return s.size() >= it.size() && s.substr(0, it.size()).extract() == (it) &&
                     (s[it.size()] == ' ' || s[it.size()] == '(');
@@ -230,22 +241,35 @@ namespace parse {
                         auto root = ast::generate_ast(s.substr(i + 1)); // a = 3, b = 4
                         auto buf = root->get_variables(orig);
 
+                        ans.clear();
+                        std::set<std::vector<custom::custom_type*>, ast::vacuum_cleaner> lists;
                         for (auto &var: buf) {
                             auto res = var.front();
                             auto *x = new custom::custom_type;
                             *x = *res;
-                            res->name = custom::erase_spaces(s.substr(0, i)).extract();
-                            res->history = std::pair<std::size_t, custom::custom_type*>(0, x);
+                            x->name = custom::erase_spaces(s.substr(0, i)).extract();
+                            x->history = res->history;
+                            x->parent = res->parent;
 
-                            for (auto &k : ans) {
+                            for (auto &_k : orig) {
+                                auto k = _k;
                                 bool found = false;
                                 for (auto &j : k) {
-                                    if (j->name == custom::erase_spaces(s.substr(0, i)).extract()) { j = res; found = true; break; }
+                                    if (j->name == custom::erase_spaces(s.substr(0, i)).extract())
+                                        { j = x; found = true; break; }
                                 }
-                                if (found) continue;
-                                k.push_back(res);
-                                std::sort(k.begin(), k.end());
+                                if (found) {
+                                    lists.insert(k);
+                                    continue;
+                                }
+                                k.push_back(x);
+                                std::sort(k.begin(), k.end(),
+                                    custom::dereferenced_sort_comparator<custom::custom_type>);
+                                lists.insert(k);
                             }
+                        }
+                        for (auto &j : lists) {
+                            ans.push_back(j);
                         }
                         return ans;
                     }
@@ -286,18 +310,9 @@ namespace parse {
             return code->size() - l;
         }
 
-        init_struct_cession(what, static std::string from_any_to_str(custom::custom_type::inner_type &what))
-        enable_all_types(from_any_to_str, what)
-        close_cession(T)
-        static std::string from_any_to_str(custom::custom_type::inner_type &what) {
-            auto x = std::get<interval::interval<T>>(what.value()).any();
-            if (x == std::nullopt) return "";
-            std::stringstream ss;
-            ss << std::setprecision(13) << x.value();
-            return ss.str();
-        }
 
-        void parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) const {
+
+        ast::variables_t parse(node_t *node, const ast::variables_t &vars, const size_t depth = 0) const {
             ast::variables_t _vars = vars;
 
 #if defined(DEBUG_MODE)
@@ -308,6 +323,7 @@ namespace parse {
 #endif
 
             ast::variables_t else_data;
+            std::set<std::vector<custom::custom_type*>, ast::vacuum_cleaner> tmp;
             for (auto i = node->l; i < node->l + node->len; ++i) {
                 if (code->operator[](i).empty() || code->operator[](i)[0] == '#') continue;
                 if (verbose) std::cout << '\r' << "line " << i + 1 << " / " << code->size() << std::flush;
@@ -333,10 +349,18 @@ namespace parse {
                         ast::variables_t buf_vars;
                         if (!cfg_print_only) {
                             if (fw_type != ELSE) {
+                                if (!tmp.empty()) {
+                                    _vars.clear();
+                                    for (const auto &el : tmp) _vars.push_back(el);
+                                    tmp.clear();
+                                }
                                 const auto ast_root = ast::generate_ast(erase_spaces(buf.substr
                                     (buf_fw.size(), buf.size() - 1 - buf_fw.size())));
                                 // ast_root->tree();
                                 buf_vars = ast_root->get_variables(_vars);
+                                for (auto &list : _vars) {
+                                    tmp.insert(list);
+                                }
                             }
                             if (fw_type == ELSE) {
                                 buf_vars = ast::ast_node::once_not(else_data, _vars);
@@ -353,23 +377,32 @@ namespace parse {
                             }
                         }
                         ast::ast_node::cmpPush(buf_vars, _vars);
-                        parse(child,  buf_vars, depth + 1);
+                        auto x = parse(child,  buf_vars, depth + 1);
+                        for (auto &list : x) {
+                            tmp.insert(list);
+                        }
                         i += child->len;
                         break;
                     }
                     default: {
+                        if (!tmp.empty()) {
+                            _vars.clear();
+                            for (const auto &el : tmp) _vars.push_back(el);
+                            tmp.clear();
+                        }
                         else_data.clear();
                         if (cfg_print_only) break;
                         auto buf = code->operator[](i);
                         custom::str_type res(buf);
                         auto buffer_vars = translate(res, _vars);
                         if (!buffer_vars.empty()) {
+                            _vars = buffer_vars;
                             for (auto &x : _vars) {
                                 for (const auto &y : x) {
-                                    cache.get_tests_set().insert(from_any_to_str(y->data));
+                                    y->rollback(_vars);
+                                    // cache.get_tests_set().insert(from_any_to_str(y->data));
                                 }
                             }
-                            _vars = buffer_vars;
                         }
                         break;
                     }
@@ -378,9 +411,11 @@ namespace parse {
 
             for (auto &x : _vars) {
                 for (const auto &y : x) {
-                    cache.get_tests_set().insert(from_any_to_str(y->data));
+                    y->rollback(_vars);
+                    // cache.get_tests_set().insert(from_any_to_str(y->data));
                 }
             }
+            return _vars;
         }
 
         void parse_bfs() const {
@@ -445,14 +480,22 @@ namespace parse {
                             auto buf = code->operator[](i);
                             custom::str_type res(buf);
                             auto buffer_vars = translate(res, snd);
-                            if (!buffer_vars.empty())
+                            if (!buffer_vars.empty()) {
                                 snd = buffer_vars;
+                                for (auto &x : snd) {
+                                    for (const auto &y : x) {
+                                        // cache.get_tests_set().insert(from_any_to_str(y->data));
+                                        y->rollback(snd);
+                                    }
+                                }
+                            }
                             break;
                     }
                 }
                 for (auto &x : snd) {
                     for (const auto &y : x) {
-                        cache.get_tests_set().insert(from_any_to_str(y->data));
+                        // cache.get_tests_set().insert(from_any_to_str(y->data));
+                        y->rollback(snd);
                     }
                 }
             }
@@ -489,6 +532,19 @@ namespace parse {
         }
     };
 }
+
+inline void custom::custom_type::rollback(const ast::variables_t &v) const {
+    const std::string _s = rollback_in();
+    const str_type s(_s);
+    auto root = ast::generate_ast(s); // a = 3, b = 4
+    auto buf = root->get_variables(v, false);
+    for (auto &x : buf) {
+        for (const auto &y : x) {
+            parse::cache.get_tests_set().insert(parse::from_any_to_str(y->data));
+        }
+    }
+}
+
 #undef init_cession
 #undef init_struct_cession
 #undef enable_all_types

@@ -1,27 +1,30 @@
 **Необходимые зависимости**
 ---
-    cmake, gcc, g++, make, git
+    cmake, gcc, g++, git
 
 ***Специфичные зависимости***
 
     Windows: ninja, choco
-    Macos: brew
+    Macos: brew, make
+    Linux: make
     
-**Если в системе каких-то зависимостей нет, они будут установлены автоматически.**
+**Если в системе каких-то зависимостей нет, они будут установлены автоматически. Может потребоваться пароль администратора**
 
 **Установка**
 ---
 ***Linux/Macos***
 
-    git clone https://github.com/xm200/CodeTest
-    cd CodeTest
-    sudo ./installer_mac_linux.sh
+    git clone https://github.com/xm200/codetest
+    cd codetest
+    ./configure.sh
+    make
+    sudo make install
 
 ***Windows***
 
     В консоли администратора запустить:
-    git clone https://github.com/xm200/CodeTest
-    cd CodeTest
+    git clone https://github.com/xm200/codetest
+    cd codetest
     .\install.ps1
 
 **Использование**:
@@ -38,13 +41,11 @@
 
 ---
     Windows:
-        .\codetest.exe -c Testing/test1_2.py
-        cat Testing/output.txt
+        .\codetest.exe -c -v -o -- test.py
 
 ---
     Linux/Macos:
-        codetest --cfg-only Testing/test3.py
-        cat Testing/output.txt
+        codetest --cfg-only -v -o -- test.py
 
 ---
 

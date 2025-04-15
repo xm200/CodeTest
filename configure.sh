@@ -1,29 +1,13 @@
 #!/bin/bash
-
-mac=0
-
-if [ "$(uname)" == "Darwin" ]
-then
-  mac=1
-fi
-
 # Banner
 echo "------------------------------------------------"
 echo ""
 echo ""
-echo -n "Welcome! It is CodeTest installer for "
-if [ $mac == 1 ]
-then
-   echo "Macos."
-else
-   echo "Linux."
-fi
+echo "Welcome! It is CodeTest installer for Linux."
+echo ""
+echo "You must have administrator rights for installation"
 echo ""
 echo "This programs will be installed, if they are not installed yet:"
-if [ $mac == 1 ]
-then
-  echo "    - brew / Homebrew"
-fi
 echo "    - make"
 echo "    - cmake / CMake"
 echo "    - gcc/g++ / GNU Compiler Collection"
@@ -31,6 +15,13 @@ echo ""
 echo ""
 echo "------------------------------------------------"
 echo ""
+
+mac=0
+
+if [ "$(uname)" == "Darwin" ]
+then
+  mac=1
+fi
 
 sub_install () {
   local tmp_path
@@ -51,6 +42,10 @@ sub_install () {
           sudo apt update
           sudo apt install "$2"
         else
+          if [ $mac == 1 ]
+          then
+            sub_install "brew"
+          fi
           brew install "$2"
         fi
       else
@@ -67,11 +62,6 @@ sub_install () {
   fi
 }
 
-if [ $mac == 1 ]
-then
-  sub_install "brew"
-fi
-
 
 sub_install "make" "build-essential"
 sub_install "cmake" "cmake"
@@ -79,7 +69,5 @@ sub_install "gcc" "gcc"
 sub_install "g++" "g++"
 
 cmake .
-make
-sudo make install
 
 echo "Built! Usage: codetest --help"
