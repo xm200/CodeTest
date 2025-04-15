@@ -394,7 +394,8 @@ namespace parse {
                         if (!buffer_vars.empty()) {
                             for (auto &x : _vars) {
                                 for (const auto &y : x) {
-                                    cache.get_tests_set().insert(from_any_to_str(y->data));
+                                    y->rollback(_vars);
+                                    // cache.get_tests_set().insert(from_any_to_str(y->data));
                                 }
                             }
                             _vars = buffer_vars;

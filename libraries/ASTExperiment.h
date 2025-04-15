@@ -258,8 +258,9 @@ namespace custom {
             if (parent == nullptr) {
                 return a;
             }
+            if (history.first <= ast::operations::LS) return parent->rollback_in(a);
 
-            std::string s = "(" + a + " " + inverse_operator(history.first) + " " + history.second->rollback_in() + ")";
+            const std::string s = "(" + a + " " + inverse_operator(history.first) + " " + history.second->rollback_in() + ")";
             return parent->rollback_in(s);
             /*
              a += 3
@@ -748,19 +749,32 @@ namespace ast {
             return out;
         }
 
+        init_struct_cession(a, [[nodiscard]] static bool is_empty(const custom::custom_type::inner_type &a))
+            enable_all_types(is_empty, a)
+        close_cession(T)
+        [[nodiscard]] static bool is_empty(const custom::custom_type::inner_type &a) {
+            return std::get<interval::interval<T>>(a.value()).empty();
+        }
+
         static void cmpPush(variables_t &write, const variables_t &orig) {
             auto buf = write;
             write.clear();
+            std::set<std::vector<custom::custom_type*>> tmp;
             for (auto &i : orig) {
                 for (auto &j : buf) {
-                    write.push_back(i);
+                    // write.push_back(i);
+                    std::vector<custom::custom_type*> w = i;
                     auto buf_index = 0;
-                    for (auto &k : write.back()) {
+                    for (auto &k : w) {
                         if (buf_index < j.size() && k->name == j[buf_index]->name) {
                             k = j[buf_index++];
                         }
                     }
+                    tmp.insert(w);
                 }
+            }
+            for (auto &i : tmp) {
+                write.push_back(i);
             }
         }
 
