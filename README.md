@@ -27,7 +27,7 @@
 
     git clone https://github.com/xm200/codetest
     cd codetest
-    ./configure.sh
+    bash configure.sh
     make
     sudo make install
 
@@ -66,8 +66,8 @@
 
 ---
     Windows:
-        .\codetest.exe -c -v -o -- test.py
+        .\codetest.exe -v -c -o -- test.py
 
 ---
     Linux/Macos:
-        codetest --cfg-only -v -o -- test.py
+        codetest -o -- --cfg-only -v test.py

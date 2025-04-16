@@ -82,4 +82,4 @@ then
 fi
 cmake .
 
-echo "Built! Usage: codetest --help"
+echo "Done! Now you should run make"
