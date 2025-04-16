@@ -78,34 +78,34 @@ namespace custom {
         [[maybe_unused]] vec_line(const S *vec_, const std::size_t l_, const std::size_t len_) :
                 vec(vec_), l(l_), len(len_) {}
 
-        [[maybe_unused]] [[nodiscard]] std::size_t size() const _GLIBCXX_NOEXCEPT { return len; }
+        [[maybe_unused]] [[nodiscard]] std::size_t size() const  { return len; }
 
-        [[maybe_unused]] [[nodiscard]] typename S::iterator begin() _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] typename S::iterator begin()
         { return vec->begin() + l; }
-        [[maybe_unused]] [[nodiscard]] typename S::const_iterator begin() const _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] typename S::const_iterator begin() const
         {return vec->cbegin() + l; }
 
-        [[maybe_unused]] [[nodiscard]] typename S::iterator end() _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] typename S::iterator end()
         { return vec->begin() + l + len; }
-        [[maybe_unused]] [[nodiscard]] typename S::const_iterator end() const _GLIBCXX_NOEXCEPT
+        [[maybe_unused]] [[nodiscard]] typename S::const_iterator end() const
         {return vec->cbegin() + l + len; }
 
-        [[maybe_unused]] [[nodiscard]] auto &front() _GLIBCXX_NOEXCEPT {
+        [[maybe_unused]] [[nodiscard]] auto &front() {
             return vec->operator[](l);
         }
-        [[maybe_unused]] [[nodiscard]] auto &front() const _GLIBCXX_NOEXCEPT {
+        [[maybe_unused]] [[nodiscard]] auto &front() const {
             return vec->operator[](l);
         }
 
-        [[maybe_unused]] [[nodiscard]] auto &back() _GLIBCXX_NOEXCEPT {
+        [[maybe_unused]] [[nodiscard]] auto &back() {
             return vec->operator[](l + len - 1);
         }
-        [[maybe_unused]] [[nodiscard]] auto &back() const _GLIBCXX_NOEXCEPT {
+        [[maybe_unused]] [[nodiscard]] auto &back() const {
             return vec->operator[](l + len - 1);
         }
 
         [[maybe_unused]] [[nodiscard]] vec_line substr(const std::size_t pos, const std::size_t sz = -1)
-        const _GLIBCXX_NOEXCEPT {
+        const {
             return {vec, pos + l, std::min(sz, len - pos)};
         }
 

@@ -16,7 +16,7 @@ add_compile_definitions(typeInt=long\ long)
 add_compile_definitions(typeFloat=long\ double)
 
 set(CMAKE_CXX_STANDARD 17)
-option(DEBUG "Provide debug mode" ON)
+option(DEBUG "Provide debug mode" OFF)
 
 if (DEBUG)
     add_compile_definitions(DEBUG_MODE)
@@ -54,8 +54,14 @@ add_test(NAME test_not_generation_bfs COMMAND $<TARGET_FILE:test_checker> 6 bfs 
 add_test(NAME test_rollback_generation_dfs COMMAND $<TARGET_FILE:test_checker> 7 dfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 add_test(NAME test_rollback_generation_bfs COMMAND $<TARGET_FILE:test_checker> 7 bfs WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
-target_link_libraries(codetest -static)
-target_link_libraries(test_lib_interval -static)
-target_link_libraries(test_checker -static)
+if (NOT $ENV{MAC})
+    target_link_libraries(codetest -static)
+    target_link_libraries(test_lib_interval -static)
+    target_link_libraries(test_checker -static)
+else ()
+    target_link_libraries(codetest)
+    target_link_libraries(test_lib_interval)
+    target_link_libraries(test_checker)
+endif ()
 
 install(TARGETS codetest DESTINATION bin)

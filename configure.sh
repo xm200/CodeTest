@@ -79,8 +79,6 @@ if [ $mac == 0 ]
 then
   sub_install "gcc" "gcc"
   sub_install "g++" "g++"
-else
-  sub_install "clang" "clang"
 fi
 cmake .
 
